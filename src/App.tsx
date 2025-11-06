@@ -1,35 +1,36 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
 import './App.css'
+import ServerField from './components/ServerField.tsx'
+import Fab from '@mui/material/Fab'
+import AddIcon from '@mui/icons-material/Add';
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [serverFields, setServerFields] = useState<number[]>([]);
+
+  const addServerField = () => {
+    setServerFields(prev => [...prev, prev.length]);
+  };
 
   return (
     <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+      <div id="main_container">
+        <h1>Hello, World!</h1>
+        <Fab 
+          color="primary" 
+          aria-label="add" 
+          onClick={addServerField}
+          style={{ position: 'fixed', bottom: '2rem', right: '2rem' }}
+        >
+          <AddIcon />
+        </Fab>
+
+        {serverFields.map((id) => (
+          <ServerField key={id} />
+        ))}
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
     </>
   )
 }
+
 
 export default App
