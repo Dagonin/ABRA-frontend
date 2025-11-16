@@ -18,7 +18,7 @@ function ServerField() {
         <div className="server_field_container">
             <Checkbox checked={!isDisabled} onChange={toggleDisabled} />
             <ExampleNumberField min={0} defaultValue={5} disabled={isDisabled} />
-            <TextField id="outlined-basic" label="Outlined" variant="outlined" disabled={isDisabled} />
+            <TextField id="outlined-basic" label="URL" variant="outlined" disabled={isDisabled} />
             
             <Button variant="text" ><Delete /></Button>
         </div>

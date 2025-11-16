@@ -14,19 +14,20 @@ function App() {
   return (
     <>
       <div id="main_container">
-        <h1>Hello, World!</h1>
         <Fab 
           color="primary" 
           aria-label="add" 
           onClick={addServerField}
-          style={{ position: 'fixed', bottom: '2rem', right: '2rem' }}
+          style={{ position: 'fixed', bottom: '23rem', right: '15rem' }}
         >
           <AddIcon />
         </Fab>
-
-        {serverFields.map((id) => (
+        <div id="server_fields">
+                  {serverFields.map((id) => (
           <ServerField key={id} />
         ))}
+        </div>
+
       </div>
     </>
   )

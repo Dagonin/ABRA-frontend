@@ -14,16 +14,19 @@ interface NumberFieldProps {
   disabled?: boolean;
 }
 
-export default function ExampleNumberField({ min = 0, max = 999, defaultValue = 10, disabled = false }: NumberFieldProps) {
+export default function ExampleNumberField({ min = 0, max = 100, defaultValue = 10, disabled = false }: NumberFieldProps) {
   const id = React.useId();
   return (
+    
     <NumberField.Root 
       min={min} 
       max={max}
       id={id} 
       disabled={disabled}
       defaultValue={defaultValue} 
-      className={styles.Field}>
+      className={styles.Field}
+      >
+
       <NumberField.ScrubArea className={styles.ScrubArea}>
         <label htmlFor={id} className={styles.Label}>
           Waga
@@ -32,7 +35,6 @@ export default function ExampleNumberField({ min = 0, max = 999, defaultValue = 
           <CursorGrowIcon />
         </NumberField.ScrubAreaCursor>
       </NumberField.ScrubArea>
-
       <NumberField.Group className={styles.Group}>
         <NumberField.Decrement className={styles.Decrement}>
           <MinusIcon />

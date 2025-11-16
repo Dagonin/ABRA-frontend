@@ -1,6 +1,18 @@
 #main_container {
-  background-color: #b38282;
+  background-color: #e7bf8a;
   height: 60vh;
   width: 70%;
   margin: auto;
+}
+
+#server_fields {
+  margin-top: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  align-items: center;
+}
+
+.server_field_container {
+  margin-top: 10px;
 }
