@@ -1,7 +1,92 @@
 .server_field_container {
     display: flex;
-    width: 60%;
-    color: black;
-    border: 1px solid black;
-    padding: 10px;
+    align-items: flex-start;
+    gap: 1.5rem;
+    width: 100%;
+    max-width: 700px;
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.6) 0%, rgba(15, 23, 42, 0.6) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.3);
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 
+      0 4px 15px rgba(102, 126, 234, 0.1),
+      inset 0 1px 0 0 rgba(102, 126, 234, 0.15);
+    transition: all 0.3s ease;
+    backdrop-filter: blur(8px);
+}
+
+.server_field_container:hover {
+    box-shadow: 
+      0 8px 25px rgba(102, 126, 234, 0.2),
+      inset 0 1px 0 0 rgba(102, 126, 234, 0.25);
+    border-color: rgba(102, 126, 234, 0.5);
+    transform: translateY(-2px);
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.8) 100%);
+}
+
+.server_field_container .MuiCheckbox-root {
+    flex-shrink: 0;
+    color: #94a3b8;
+}
+
+.server_field_container .MuiCheckbox-root.Mui-checked {
+    color: #48bb78;
+}
+
+.server_field_container .MuiTextField-root {
+    flex: 1;
+    min-width: 200px;
+}
+
+.server_field_container .MuiTextField-root .MuiOutlinedInput-root {
+    border-radius: 8px;
+    background-color: rgba(15, 23, 42, 0.5);
+    color: #e2e8f0;
+}
+
+.server_field_container .MuiTextField-root .MuiOutlinedInput-root fieldset {
+    border-color: rgba(102, 126, 234, 0.2);
+}
+
+.server_field_container .MuiTextField-root .MuiOutlinedInput-root:hover fieldset {
+    border-color: rgba(102, 126, 234, 0.4);
+}
+
+.server_field_container .MuiTextField-root .MuiOutlinedInput-root.Mui-focused fieldset {
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+}
+
+.server_field_container .MuiOutlinedInput-input {
+    color: #e2e8f0;
+}
+
+.server_field_container .MuiOutlinedInput-input::placeholder {
+    color: #64748b;
+    opacity: 0.7;
+}
+
+.server_field_container .MuiFormLabel-root {
+    color: #94a3b8;
+}
+
+.server_field_container .MuiButton-text {
+    color: #f56565;
+    transition: all 0.2s ease;
+    flex-shrink: 0;
+}
+
+.server_field_container .MuiButton-text:hover {
+    background-color: rgba(245, 101, 101, 0.15);
+    color: #fc8181;
+}
+
+.server_field_container .MuiButton-contained {
+    background: linear-gradient(135deg, rgba(245, 101, 101, 0.8) 0%, rgba(229, 62, 62, 0.8) 100%);
+    box-shadow: 0 4px 15px rgba(245, 101, 101, 0.2);
+}
+
+.server_field_container .MuiButton-contained:hover {
+    background: linear-gradient(135deg, rgba(245, 101, 101, 1) 0%, rgba(229, 62, 62, 1) 100%);
+    box-shadow: 0 6px 20px rgba(245, 101, 101, 0.4);
 }

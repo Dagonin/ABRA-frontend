@@ -1,59 +1,90 @@
 .Field {
     display: flex;
-    align-items: start;
-    gap: 0.25rem;
     align-items: center;
+    gap: 0.75rem;
+    flex-shrink: 0;
 }
 
 .ScrubArea {
     cursor: ew-resize;
-    font-weight: bold;
+    font-weight: 600;
     user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.15) 0%, rgba(118, 75, 162, 0.15) 100%);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    backdrop-filter: blur(8px);
+}
 
+.ScrubArea:hover {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.25) 0%, rgba(118, 75, 162, 0.25) 100%);
+    border-color: rgba(102, 126, 234, 0.4);
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
 }
 
 .ScrubAreaCursor {
-    filter: drop-shadow(0 1px 1px #0008);
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.3));
+    transition: transform 0.2s ease;
+    color: #94a3b8;
+}
+
+.ScrubArea:hover .ScrubAreaCursor {
+    transform: scale(1.1);
+    color: #667eea;
 }
 
 .Label {
     cursor: ew-resize;
     font-size: 0.875rem;
     line-height: 1.25rem;
-    font-weight: 500;
-    color: var(--color-gray-900);
-
+    font-weight: 600;
+    color: #cbd5e0;
+    white-space: nowrap;
 }
 
 .Group {
     display: flex;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.15);
+    border-radius: 8px;
+    overflow: hidden;
 }
 
 .Input {
     box-sizing: border-box;
     margin: 0;
-    padding: 0;
+    padding: 0.75rem;
     border-radius: 0;
-    border-top: 1px solid var(--color-gray-200);
-    border-bottom: 1px solid var(--color-gray-200);
+    border: 1px solid rgba(102, 126, 234, 0.2);
     border-left: none;
     border-right: none;
-    width: 6rem;
+    width: 5rem;
     height: 2.5rem;
-    font-family: inherit;
+    font-family: 'Roboto Mono', monospace;
     font-size: 1rem;
-    font-weight: normal;
-    background-color: transparent;
-    color: var(--color-gray-900);
-
+    font-weight: 600;
+    background-color: rgba(15, 23, 42, 0.5);
+    color: #e2e8f0;
     text-align: center;
     font-variant-numeric: tabular-nums;
+    transition: all 0.2s ease;
+}
 
-    &:focus {
-        z-index: 1;
-        outline: 2px solid var(--color-blue);
-        outline-offset: -1px;
-    }
+.Input:focus {
+    z-index: 1;
+    outline: none;
+    background-color: rgba(102, 126, 234, 0.15);
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+}
+
+.Input:disabled {
+    background-color: rgba(30, 41, 59, 0.5);
+    color: #64748b;
+    cursor: not-allowed;
 }
 
 .Decrement,
@@ -67,22 +98,34 @@
     margin: 0;
     outline: 0;
     padding: 0;
-    border: 1px solid var(--color-gray-200);
-    border-radius: 0.375rem;
-    background-color: var(--color-gray-50);
+    border: 1px solid rgba(102, 126, 234, 0.2);
+    border-radius: 0;
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.1) 0%, rgba(118, 75, 162, 0.1) 100%);
     background-clip: padding-box;
-    color: var(--color-gray-900);
+    color: #94a3b8;
     user-select: none;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-weight: 600;
+}
 
-    @media (hover: hover) {
-        &:hover {
-            background-color: var(--color-gray-100);
-        }
-    }
+.Decrement:hover,
+.Increment:hover {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.2) 0%, rgba(118, 75, 162, 0.2) 100%);
+    color: #667eea;
+    border-color: rgba(102, 126, 234, 0.4);
+}
 
-    &:active {
-        background-color: var(--color-gray-100);
-    }
+.Decrement:active,
+.Increment:active {
+    background: linear-gradient(135deg, rgba(102, 126, 234, 0.3) 0%, rgba(118, 75, 162, 0.3) 100%);
+    color: #f1f5f9;
+}
+
+.Decrement:disabled,
+.Increment:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
 }
 
 .Decrement {
