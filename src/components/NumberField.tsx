@@ -1,5 +1,4 @@
 
-import { NumberField } from '@base-ui-components/react/number-field';
 import React from 'react';
 import styles from './NumberField.module.css';
 
@@ -11,58 +10,72 @@ interface NumberFieldProps {
   min?: number;
   max?: number;
   defaultValue?: number;
+  value?: number;
   disabled?: boolean;
+  onChange?: (value: number) => void;
 }
 
-export default function ExampleNumberField({ min = 0, max = 100, defaultValue = 10, disabled = false }: NumberFieldProps) {
+export default function ExampleNumberField({ min = 0, max = 100, defaultValue = 10, value, disabled = false, onChange }: NumberFieldProps) {
   const id = React.useId();
-  return (
-    
-    <NumberField.Root 
-      min={min} 
-      max={max}
-      id={id} 
-      disabled={disabled}
-      defaultValue={defaultValue} 
-      className={styles.Field}
-      >
+  const [internal, setInternal] = React.useState<number>(typeof value === 'number' ? value : defaultValue);
 
-      <NumberField.ScrubArea className={styles.ScrubArea}>
-        <label htmlFor={id} className={styles.Label}>
-          Waga
-        </label>
-        <NumberField.ScrubAreaCursor className={styles.ScrubAreaCursor}>
-          <CursorGrowIcon />
-        </NumberField.ScrubAreaCursor>
-      </NumberField.ScrubArea>
-      <NumberField.Group className={styles.Group}>
-        <NumberField.Decrement className={styles.Decrement}>
+  React.useEffect(() => {
+    if (typeof value === 'number' && value !== internal) {
+      setInternal(value);
+    }
+  }, [value, internal]);
+
+  const current = typeof value === 'number' ? value : internal;
+  const clamp = (v: number) => Math.min(max, Math.max(min, v));
+  const apply = (v: number) => {
+    const next = clamp(v);
+    setInternal(next);
+    onChange?.(next);
+  };
+
+  return (
+    <div className={styles.Field}>
+      <label htmlFor={id} className={styles.Label}>Waga</label>
+      <div className={styles.Group}>
+        <button
+          type="button"
+          className={styles.Decrement}
+          disabled={disabled}
+          onClick={() => apply(current - 1)}
+        >
           <MinusIcon />
-        </NumberField.Decrement>
-        <NumberField.Input className={styles.Input} />
-        <NumberField.Increment className={styles.Increment}>
+        </button>
+        <input
+          id={id}
+            className={styles.Input}
+            disabled={disabled}
+            value={String(current)}
+            onChange={(e) => {
+              const next = Number(e.target.value);
+              if (!Number.isNaN(next)) {
+                apply(next);
+              }
+            }}
+            onBlur={(e) => {
+              if (e.target.value.trim() === '') {
+                apply(min);
+              }
+            }}
+        />
+        <button
+          type="button"
+          className={styles.Increment}
+          disabled={disabled}
+          onClick={() => apply(current + 1)}
+        >
           <PlusIcon />
-        </NumberField.Increment>
-      </NumberField.Group>
-    </NumberField.Root>
+        </button>
+      </div>
+    </div>
   );
 }
 
-function CursorGrowIcon(props: React.ComponentProps<'svg'>) {
-  return (
-    <svg
-      width="26"
-      height="14"
-      viewBox="0 0 24 14"
-      fill="black"
-      stroke="white"
-      xmlns="http://www.w3.org/2000/svg"
-      {...props}
-    >
-      <path d="M19.5 5.5L6.49737 5.51844V2L1 6.9999L6.5 12L6.49737 8.5L19.5 8.5V12L25 6.9999L19.5 2V5.5Z" />
-    </svg>
-  );
-}
+// Removed animated cursor used by previous library-based component.
 
 function PlusIcon(props: React.ComponentProps<'svg'>) {
   return (

@@ -1,6 +1,36 @@
-version: '3.9'
-
 services:
+  db:
+    image: postgres:16-alpine
+    container_name: abra-postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+      POSTGRES_DB: postgres
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  abra-backend:
+    build:
+      context: ../ABRA-backend
+      dockerfile: Dockerfile
+    container_name: abra-backend-app
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/postgres
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: admin
+      SPRING_JPA_HIBERNATE_DDL_AUTO: update
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
   abra-frontend:
     build:
       context: .
@@ -9,6 +39,7 @@ services:
       - "3000:3000"
     environment:
       - NODE_ENV=production
+      - VITE_API_BASE_URL=http://localhost:8080
     container_name: abra-frontend-app
     restart: unless-stopped
     healthcheck:
@@ -17,3 +48,17 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  abra-mock-server:
+    build:
+      context: ../ABRA-mock-servers
+      dockerfile: Dockerfile
+    container_name: abra-mock-server
+    environment:
+      - PORT=8081
+    ports:
+      - "8081:8081"
+    restart: unless-stopped
+
+volumes:
+  pgdata:
