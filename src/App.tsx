@@ -13,6 +13,10 @@ function App() {
     setDomainFields(prev => [...prev, prev.length]);
   };
 
+  const removeDomainField = (idToRemove: number) => {
+    setDomainFields(prev => prev.filter(id => id !== idToRemove));
+  };
+
   return (
     <>
       <div id="main_container">
@@ -25,9 +29,9 @@ function App() {
           <AddIcon />
         </Fab>
         <div id="domain_fields">
-                  {domainFields.map((id) => (
-          <DomainField key={id} />
-        ))}
+          {domainFields.map((id) => (
+            <DomainField key={id} onDelete={() => removeDomainField(id)} />
+          ))}
         </div>
 
       </div>

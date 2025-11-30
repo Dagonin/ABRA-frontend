@@ -1,0 +1,80 @@
+.test_field_container {
+    background: white;
+    border-radius: 6px;
+    padding: 0.75rem;
+    border-left: 3px solid #764ba2;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.test_field_header_wrapper {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.5rem;
+    border-radius: 6px;
+    transition: background-color 0.2s;
+}
+
+.test_field_header_wrapper:hover {
+    background-color: #f5f5f5;
+}
+
+.test_field_header_content {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.test_content_wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+}
+
+.variant_fields_wrapper {
+    background: #f5f5f5;
+    border-left: 3px solid #764ba2;
+    padding: 0.75rem;
+    border-radius: 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.field_label_header {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    user-select: none;
+    padding: 0.25rem 0;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+    font-weight: 600;
+    color: #333;
+    font-size: 0.8rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.field_label_header:hover {
+    background-color: #e8e8e8;
+}
+
+.field_label_header .expand-icon {
+    transition: transform 0.3s ease;
+    margin-left: -8px;
+}
+
+.field_label_header .expand-icon.expanded {
+    transform: rotate(180deg);
+}
+
+#variant_fields {
+    padding-left: 0.25rem;
+}

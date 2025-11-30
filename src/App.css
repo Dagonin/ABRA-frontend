@@ -1,18 +1,32 @@
 #main_container {
-  background-color: #e7bf8a;
-  height: 60vh;
-  width: 70%;
-  margin: auto;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  min-height: 100vh;
+  padding: 2rem;
 }
 
-#variant_fields {
+#domain_fields {
   margin-top: 2rem;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  align-items: center;
+  gap: 2rem;
 }
 
-.variant_field_container {
-  margin-top: 10px;
+#test_fields,
+#url_fields,
+#variant_fields,
+#variant_url_fields {
+  margin-top: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 0;
+}
+
+.field_label {
+  font-weight: 600;
+  color: #333;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.5rem;
 }
