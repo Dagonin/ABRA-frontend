@@ -37,8 +37,8 @@ function VariantField({ onDelete }: VariantFieldProps) {
           <ExpandMoreIcon />
         </IconButton>
         <div className="variant_controls">
-          <Checkbox checked={isDisabled} onChange={toggleDisabled} size="small" />
-          <TextField label="Variant Name" variant="outlined" size="small" />
+          <Checkbox checked={isDisabled} onChange={toggleDisabled} size="small" onClick={(e) => e.stopPropagation()} />
+          <TextField label="Variant Name" variant="outlined" size="small" onClick={(e) => e.stopPropagation()} />
           <ExampleNumberField min={0} defaultValue={5} disabled={isDisabled} />
         </div>
         <IconButton color="error" onClick={(e) => { e.stopPropagation(); onDelete?.(); }} aria-label="delete-variant" size="small">

@@ -42,7 +42,7 @@ function DomainField({ onDelete }: DomainFieldProps) {
           <ExpandMoreIcon />
         </IconButton>
         <div className="domain_header_content">
-          <TextField id="domain-url" label="Domain URL" variant="outlined" fullWidth size="small" />
+          <TextField id="domain-url" label="Domain URL" variant="outlined" fullWidth size="small" onClick={(e) => e.stopPropagation()} />
         </div>
         <IconButton color="error" onClick={(e) => { e.stopPropagation(); onDelete?.(); }} aria-label="delete-domain" size="small">
           <DeleteIcon />

@@ -30,7 +30,7 @@ function TestField({ onDelete }: TestFieldProps) {
           <ExpandMoreIcon />
         </IconButton>
         <div className="test_field_header_content">
-          <TextField label="Test Name" variant="outlined" fullWidth size="small" />
+          <TextField label="Test Name" variant="outlined" fullWidth size="small" onClick={(e) => e.stopPropagation()} />
         </div>
         <IconButton color="error" onClick={(e) => { e.stopPropagation(); onDelete?.(); }} aria-label="delete-test" size="small">
           <DeleteIcon />
