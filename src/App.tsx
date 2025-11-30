@@ -1,14 +1,16 @@
 import { useState } from 'react'
 import './App.css'
-import ServerField from './components/ServerField.tsx'
+import VariantField from './components/VariantField.tsx'
 import Fab from '@mui/material/Fab'
 import AddIcon from '@mui/icons-material/Add';
+import TestField from './components/TestField.tsx'
+import DomainField from './components/DomainField.tsx';
 
 function App() {
-  const [serverFields, setServerFields] = useState<number[]>([]);
+  const [domainFields, setDomainFields] = useState<number[]>([]);
 
-  const addServerField = () => {
-    setServerFields(prev => [...prev, prev.length]);
+  const addDomainField = () => {
+    setDomainFields(prev => [...prev, prev.length]);
   };
 
   return (
@@ -17,14 +19,14 @@ function App() {
         <Fab 
           color="primary" 
           aria-label="add" 
-          onClick={addServerField}
+          onClick={addDomainField}
           style={{ position: 'fixed', bottom: '23rem', right: '15rem' }}
         >
           <AddIcon />
         </Fab>
-        <div id="server_fields">
-                  {serverFields.map((id) => (
-          <ServerField key={id} />
+        <div id="domain_fields">
+                  {domainFields.map((id) => (
+          <DomainField key={id} />
         ))}
         </div>
 
