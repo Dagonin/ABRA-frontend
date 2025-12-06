@@ -1,267 +1,235 @@
-# Dokumentacja Projektu ABRA Frontend
+1111111# Dokumentacja Projektu ABRA (Frontend + Backend)
 
 ## 📋 Spis Treści
-1. [Przegląd Projektu](#przegląd-projektu)
-2. [Technologia](#technologia)
-3. [Struktura Projektu](#struktura-projektu)
-4. [Komponenty](#komponenty)
-5. [Instalacja i Uruchomienie](#instalacja-i-uruchomienie)
-6. [Skrypty NPM](#skrypty-npm)
-7. [Architektura](#architektura)
+1. [Przegląd Systemu](#przegląd-systemu)
+2. [Cel Biznesowy](#cel-biznesowy)
+3. [Technologie](#technologie)
+4. [Architektura Wysokiego Poziomu](#architektura-wysokiego-poziomu)
+5. [Model Danych (Backend)](#model-danych-backend)
+6. [Relacje Encji](#relacje-encji)
+7. [API Backend – Skrót](#api-backend--skrót)
+8. [Front‑end – Struktura i Komponenty](#front‑end--struktura-i-komponenty)
+9. [Przepływ Ruchu i Logika Variantów](#przepływ-ruchu-i-logika-variantów)
+10. [Środowisko Uruchomieniowe](#środowisko-uruchomieniowe)
+11. [Uruchomienie – Kroki Szybkie](#uruchomienie--kroki-szybkie)
+12. [Docker / Mock Serwery](#docker--mock-serwery)
+13. [Load Balancing – Założenia](#load-balancing--założenia)
+14. [Walidacje i Ograniczenia](#walidacje-i-ograniczenia)
+15. [Monitoring i Diagnostyka](#monitoring-i-diagnostyka)
+16. [Scenariusz Prezentacyjny (Demo Script)](#scenariusz-prezentacyjny-demo-script)
+17. [Roadmap / Potencjalne Ulepszenia](#roadmap--potencjalne-ulepszenia)
+18. [Troubleshooting](#troubleshooting)
+19. [Licencja](#licencja)
+20. [Historia Zmian](#historia-zmian)
 
 ---
 
-## 🎯 Przegląd Projektu
+## 🎯 Przegląd Systemu
+ABRA to system do zarządzania i kierowania ruchem testowym między różnymi wariantami oraz endpointami usług (np. serwerów aplikacyjnych). Umożliwia:
+- Definiowanie domen testowych (Domain)
+- Definiowanie testów / eksperymentów (TestModel) powiązanych z domeną
+- Zarządzanie wariantami (VariantModel) z wagami (procent ruchu) i opisem
+- Powiązywanie konkretnych endpointów (EndpointModel) z wariantami lub bezpośrednio domeną
+- Ekspozycję interfejsu REST dla panelu administracyjnego oraz frontendu
 
-**ABRA Frontend** to aplikacja webowa zbudowana w React z TypeScript. Projekt stanowi frontend dla systemu zarządzania serwerami, umożliwiając użytkownikom dynamiczne dodawanie i konfigurowanie pól serwerów.
+Frontend (React + Vite) stanowi warstwę prezentacji do konfiguracji systemu. Backend (Spring Boot) zapewnia logikę, trwałość (H2 / opcjonalnie PostgreSQL) oraz routing.
 
-### Główne Cechy:
-- ✅ Responsywny interfejs użytkownika
-- ✅ Dynamiczne dodawanie serwerów
-- ✅ Konfiguracja wag serwerów
-- ✅ Sterowanie statusem serwerów (włączenie/wyłączenie)
-- ✅ Walidacja danych wejściowych
+## 💼 Cel Biznesowy
+Umożliwić szybkie wykonywanie testów A/B / eksperymentów poprzez:
+- Elastyczne dodawanie wariantów z wagami
+- Przypisywanie do nich listy działających endpointów
+- Monitorowanie ich żywotności (pole `alive`) i aktywności (`isActive`)
+W efekcie – kontrola procentowego rozkładu ruchu oraz możliwość szybkiego wyłączania elementów.
 
----
+## 🛠 Technologie
+Backend:
+- Spring Boot 3.5.7 (Web, Data JPA, Validation, Actuator, DevTools)
+- JPA / Hibernate
+- Baza: H2 (dev) / PostgreSQL (docelowo) – obecnie aktywna H2 in‑memory
+- springdoc-openapi (Swagger UI)
 
-## 🛠️ Technologia
+Frontend:
+- React 19 + TypeScript
+- Vite 7 (szybki bundler / dev server)
+- MUI (Material UI) + @emotion (stylowanie)
+- ESLint + TypeScript ESLint
 
-### Główne Zależności:
-- **React** (v19.1.1) - Biblioteka do budowania interfejsów użytkownika
-- **TypeScript** (v5.9.3) - Język programowania z typowaniem
-- **Vite** (v7.1.7) - Narzędzie do budowania i bundowania
-- **Material-UI (MUI)** (v7.3.5) - Biblioteka komponentów UI
-- **Base UI Components** (v1.0.0-beta.4) - Komponenty bez stylu
+Inne:
+- Mock serwery Node (`ABRA-mock-servers`) do symulacji backendów docelowych
+- Docker / docker-compose (konteneryzacja komponentów)
 
-### Narzędzia Deweloperskie:
-- **ESLint** (v9.36.0) - Linter kodu
-- **TypeScript ESLint** - Integracja TypeScript z ESLint
-- **Vite React Plugin** - Optymalizacja React w Vite
-
----
-
-## 📁 Struktura Projektu
-
+## 🧱 Architektura Wysokiego Poziomu
 ```
-ABRA-frontend/
-├── public/                 # Zasoby statyczne
-├── src/                    # Kod źródłowy
-│   ├── components/         # Komponenty React
-│   │   ├── NumberField.tsx
-│   │   ├── NumberField.module.css
-│   │   ├── ServerField.tsx
-│   │   └── ServerField.css
-│   ├── assets/             # Zasoby (obrazy, ikony itp.)
-│   ├── App.tsx             # Główny komponent aplikacji
-│   ├── App.css             # Stylowanie aplikacji
-│   ├── main.tsx            # Punkt wejścia aplikacji
-│   └── index.css           # Globalne stylowanie
-├── index.html              # Plik HTML
-├── package.json            # Konfiguracja zależności
-├── tsconfig.json           # Konfiguracja TypeScript
-├── tsconfig.app.json       # Konfiguracja TypeScript dla aplikacji
-├── tsconfig.node.json      # Konfiguracja TypeScript dla Vite
-├── vite.config.ts          # Konfiguracja Vite
-├── eslint.config.js        # Konfiguracja ESLint
-└── README.md               # Dokumentacja techniczna
-
-```
-
----
-
-## 🧩 Komponenty
-
-### 1. **App.tsx** - Komponent Główny
-Główny komponent aplikacji zarządzający stanem serwerów.
-
-**Funkcjonalność:**
-- Zarządzanie listą pól serwerów
-- Przycisk FAB (Floating Action Button) do dodawania nowych serwerów
-- Renderowanie dynamicznej listy komponentów `ServerField`
-
-**Stan:**
-- `serverFields` - Array z ID serwerów
-
-**Interfejs:**
-```tsx
-const [serverFields, setServerFields] = useState<number[]>([]);
+┌──────────────────────────────────────────────────────────────┐
+│                          Frontend (React)                   │
+│  - Konfiguracja domen, testów, wariantów, endpointów         │
+│  - Komunikacja REST z backendem /api                         │
+└───────────────▲─────────────────────────────────────────────┘
+                │ HTTP (JSON)
+┌───────────────┴─────────────────────────────────────────────┐
+│                       Backend (Spring Boot)                 │
+│  - Warstwa REST Controllers                                 │
+│  - Serwisy: logika biznesowa                                │
+│  - Repositories: dostęp do danych                           │
+│  - RoutingService (wybór wariantu / endpointu docelowego)   │
+│  - HealthCheckService                                       │
+└───────────────▲─────────────────────────────────────────────┘
+                │ JPA/Hibernate
+┌───────────────┴─────────────────────────────────────────────┐
+│                           Baza Danych (H2)                  │
+└──────────────────────────────────────────────────────────────┘
 ```
 
----
+## 🗃 Model Danych (Backend)
+Encje (uproszczone pola kluczowe):
+- Domain: `domainId (PK)`, `host`, `isActive`
+- TestModel: `testId (PK)`, `name`, `subpath`, `description`, `isActive`, FK → Domain
+- VariantModel: `variantId (PK)`, `name`, `weight (1..100)`, `description`, `isActive`, FK → TestModel
+- EndpointModel: `url (PK)`, `description`, `alive`, `isActive`, FK → VariantModel (opcjonalnie), FK → Domain (opcjonalnie)
 
-### 2. **ServerField.tsx** - Komponent Pola Serwera
-Komponent reprezentujący pojedynczy serwer z ustawieniami.
+## 🔗 Relacje Encji
+- Domain 1..* TestModel
+- TestModel 1..* VariantModel
+- VariantModel 1..* EndpointModel (lista endpointów dla wariantu)
+- EndpointModel może być też powiązany bezpośrednio z domeną (fallback / ogólne endpointy)
 
-**Funkcjonalność:**
-- ✅ Checkbox do włączania/wyłączania serwera
-- ✅ Pole do wprowadzania URL serwera
-- ✅ Pole numeryczne do ustawienia wagi (NumberField)
-- ✅ Przycisk do usuwania serwera
+## 🌐 API Backend – Skrót
+Base URL: `http://localhost:8080/api`
 
-**Stan:**
-```tsx
-const [isDisabled, setIsDisabled] = useState(false);
+Przykładowe endpointy (najważniejsze):
+- `GET /api/domains` / `POST /api/domains`
+- `GET /api/tests` / `POST /api/tests`
+- `GET /api/variants` / `POST /api/variants`
+- `GET /api/variants/{id}` – szczegóły wariantu
+- `GET /api/variants/{id}/endpoints` – (NOWY) lista endpointów przypisanych do wariantu
+- `POST /api/endpoints` – dodanie endpointu
+- `GET /api/routing/{testId}` – wybór wariantu i docelowego endpointu (logika eksperymentu)
+
+Dokumentacja interaktywna: `http://localhost:8080/swagger-ui/index.html`
+Zdrowie aplikacji: `http://localhost:8080/actuator/health`
+Konsola H2: `http://localhost:8080/h2-console`
+
+## 🖥 Front‑end – Struktura i Komponenty
+Struktura katalogów: (szczegóły jak poprzednio)
+```
+src/
+  components/
+    ServerField.tsx
+    NumberField.tsx
+  api/
+    client.ts      // konfiguracja klienta HTTP (fetch/axios)
+    endpoints.ts   // funkcje pobierające endpointy
+    variants.ts    // funkcje obsługi wariantów
+```
+Główne komponenty:
+- `App.tsx` – zarządzanie listą serwerów / wariantów (UI)
+- `ServerField.tsx` – pojedynczy wpis serwera / endpointu
+- `NumberField.tsx` – kontrola wartości liczbowej (waga, limit)
+
+## 🔁 Przepływ Ruchu i Logika Variantów
+1. Klient (np. zewnętrzny użytkownik) odwołuje się do ścieżki testu (subpath) – np. `/promo`.
+2. Backend (RoutingService) pobiera wszystkie aktywne warianty testu.
+3. Wariant wybierany jest wg proporcji `weight` (sumarycznie ≤ 100). (Algorytm: losowanie liczb 1..100 i mapping do przedziałów wagowych.)
+4. Z wybranego wariantu pobierany jest aktywny endpoint (lub fallback domenowy).
+5. Ruch kierowany do wybranego URL (w przyszłości proxy / redirect / agregacja).
+
+## ⚙ Środowisko Uruchomieniowe
+Plik `application.properties` (dev):
+```
+spring.datasource.url=jdbc:h2:mem:abradb
+spring.datasource.driverClassName=org.h2.Driver
+spring.datasource.username=sa
+spring.jpa.hibernate.ddl-auto=create-drop
+spring.h2.console.enabled=true
+```
+Port backendu: `8080`
+Port frontend: `5173`
+
+Zmiana na PostgreSQL (docelowo):
+```
+spring.datasource.url=jdbc:postgresql://localhost:5432/abra
+spring.datasource.username=postgres
+spring.datasource.password=***
+spring.jpa.hibernate.ddl-auto=update
 ```
 
-**Właściwości:**
-- Checkbox steruje stanem `isDisabled`
-- Wszystkie pola są wyłączane, gdy serwer jest nieaktywny
-- Zawiera ikonę Delete dla usunięcia
-
-**Struktura:**
+## 🚀 Uruchomienie – Kroki Szybkie
+Backend:
+```powershell
+cd ABRA-backend
+./gradlew.bat bootRun -x test
 ```
-┌─ Checkbox (włączenie/wyłączenie)
-├─ NumberField (waga)
-├─ TextField (URL)
-└─ Button (usunięcie)
-```
-
----
-
-### 3. **NumberField.tsx** - Komponent Pola Numerycznego
-Zaawansowany komponent do wpisywania liczb oparty na Base UI.
-
-**Funkcjonalność:**
-- Wprowadzanie wartości numerycznej
-- Kontrola minimalna i maksymalna
-- Przycisk + i - do zmiany wartości
-- Scrubb Area - interaktywne pole do zmiany wartości poprzez przeciąganie
-
-**Props:**
-```tsx
-interface NumberFieldProps {
-  min?: number;        // Wartość minimalna (domyślnie: 0)
-  max?: number;        // Wartość maksymalna (domyślnie: 100)
-  defaultValue?: number; // Wartość domyślna (domyślnie: 10)
-  disabled?: boolean;   // Czy pole jest wyłączone (domyślnie: false)
-}
-```
-
-**Ikony:**
-- **CursorGrowIcon** - Ikona w Scrubb Area (strzałki oznaczające drag)
-- **PlusIcon** - Przycisk inkrementacji
-- **MinusIcon** - Przycisk dekrementacji
-
-**Stylesheet:**
-- `NumberField.module.css` - Style modułowe (CSS Modules)
-
----
-
-## 🚀 Instalacja i Uruchomienie
-
-### Wymagania:
-- Node.js (v14 lub wyżej)
-- npm lub yarn
-
-### Instalacja Zależności:
-```bash
+Frontend:
+```powershell
+cd ABRA-frontend
 npm install
-```
-
-### Uruchomienie Serwera Deweloperskiego:
-```bash
 npm run dev
 ```
-Aplikacja będzie dostępna na `http://localhost:5173`
-
-### Budowanie Produkcji:
-```bash
-npm run build
-```
-Zbudowana aplikacja zostanie umieszczona w folderze `dist/`
-
-### Podgląd Produkcji:
-```bash
-npm run preview
+Mock serwery (opcjonalnie):
+```powershell
+cd ABRA-mock-servers
+npm install
+node server.js
 ```
 
-### Lintowanie Kodu:
-```bash
-npm run lint
-```
+## 🐳 Docker / Mock Serwery
+- `ABRA-mock-servers/Dockerfile` – budowanie prostego serwera Node
+- Możliwe rozszerzenie: docker-compose spinający backend + mock endpoints.
+- Docelowo: konteneryzacja frontu (build statyczny + nginx) i backendu (JAR + JDK slim).
 
----
+## ⚖ Load Balancing – Założenia
+Opis szczegółowy w `LOAD_BALANCING.md`. Skrót:
+- Wagi wariantów muszą sumować się do maks. 100.
+- Warianty nieaktywne (isActive=false) są pomijane.
+- Endpointy z `alive=false` (lub `isActive=false`) nie są używane w wyborze.
+- Planowane: health-check cykliczny + automatyczne wykluczanie zepsutych endpointów.
 
-## 📜 Skrypty NPM
+## ✅ Walidacje i Ograniczenia
+- `weight`: [1..100]
+- `url`: unikalny (PK), max 50 znaków
+- `description`: max 500 znaków
+- Unikalność `host` w Domain
+- (TODO) Walidacja spójności sumy wag wariantów testu
 
-| Skrypt | Opis |
-|--------|------|
-| `npm run dev` | Uruchamia serwer deweloperski z Hot Module Replacement |
-| `npm run build` | Buduje aplikację dla produkcji (type check + bundling) |
-| `npm run lint` | Sprawdza kod z ESLint |
-| `npm run preview` | Podgląd zbudowanej aplikacji |
+## 🔍 Monitoring i Diagnostyka
+- `Actuator /health` – podstawowa diagnostyka
+- Plan: dodać `/actuator/metrics` + niestandardowe metryki (liczba wywołań wariantu).
+- H2 console do szybkiej inspekcji danych.
 
----
+## 🎬 Scenariusz Prezentacyjny (Demo Script)
+1. Uruchom backend (log startu + H2 console dostępna).
+2. Otwórz Swagger UI i pokaż endpoint `GET /api/variants/{id}/endpoints` (dodany niedawno).
+3. W frontendzie dodaj kilka serwerów / konfiguracje wag.
+4. Pokaż jak można dezaktywować serwer i wpływa to na UI.
+5. Utwórz test + warianty przez API (POST) i wywołaj routing.
+6. Zademonstruj łatwość resetu środowiska (restart – H2 create-drop).
 
-## 🏗️ Architektura
+## 🛣 Roadmap / Potencjalne Ulepszenia
+- Persistencja konfiguracji frontu (localStorage / backend sync)
+- Globalny store (Redux / Zustand / Context)
+- Zaawansowany routing (proxy forward) zamiast tylko wybrania endpointu
+- System metryk (Prometheus / Grafana)
+- Panel statystyk (użycia wariantów, error rate)
+- Automatyczny health check + TTL dla `alive`
+- Autoryzacja (JWT / OAuth2) – panel admina
+- Testy jednostkowe i E2E (Jest + Playwright)
 
-### Flow Aplikacji:
-
-```
-main.tsx (punkt wejścia)
-  ↓
-App.tsx (zarządzanie stanem)
-  ├─ Fab Button (dodawanie)
-  └─ ServerField[] (dynamiczna lista)
-      ├─ Checkbox (stan włączenia)
-      ├─ NumberField (konfiguracja wagi)
-      ├─ TextField (URL)
-      └─ Delete Button (usuwanie)
-```
-
-### Zarządzanie Stanem:
-
-Projekt wykorzystuje React Hooks do zarządzania stanem:
-- `useState` - Zarządzanie lokalnym stanem komponentów
-- Każdy `ServerField` ma własny stan `isDisabled`
-- `App` zarządza globalną listą pól serwerów
-
-### Stylowanie:
-
-- **Global CSS** (`index.css`, `App.css`) - Stylowanie globalne
-- **Module CSS** (`NumberField.module.css`) - Style modułowe dla komponenty
-- **Inline CSS** (MUI) - Style inline dla komponentów Material-UI
-
----
-
-## 📝 Notatki Deweloperskie
-
-### Dostęp do Danych:
-Aby uzyskać dostęp do aktualnych wartości z pól:
-- Waga serwera - dostępna poprzez ref do `NumberField` lub poprzez FormData
-- URL serwera - z TextField
-- Status serwera - z Checkbox
-
-### Wysyłanie Danych:
-Obecnie brak bezpośredniej integracji z backendem. Aby dodać:
-1. Dodaj funkcję do wysyłania danych na serwer
-2. Wykorzystaj fetch API lub axios
-3. Dodaj obsługę błędów i loadingów
-
-### Potencjalne Ulepszenia:
-- ✨ Dodanie walidacji formularza
-- ✨ Integracja z backend API
-- ✨ Stan globalny (Redux/Context API)
-- ✨ Testy jednostkowe (Jest/Vitest)
-- ✨ Responsive design dla urządzeń mobilnych
-- ✨ Persystencja danych (localStorage)
-
----
-
-## 🔗 Przydatne Linki
-
-- [React Documentation](https://react.dev)
-- [TypeScript Documentation](https://www.typescriptlang.org/docs/)
-- [Vite Documentation](https://vitejs.dev)
-- [Material-UI Documentation](https://mui.com)
-- [Base UI Documentation](https://base-ui.com)
-
----
+## 🛠 Troubleshooting
+| Problem | Możliwa Przyczyna | Rozwiązanie |
+|--------|-------------------|-------------|
+| 404 na `.../variants/{id}/endpoints` | Brak endpointu w kontrolerze | Upewnij się, że metoda `@GetMapping("/{id}/endpoints")` jest obecna i backend restartowany |
+| Brak dostępu do H2 console | Nie włączono `spring.h2.console.enabled` | Dodaj w `application.properties` i zrestartuj |
+| Port 8080 zajęty | Inny proces Java / Tomcat | Zweryfikuj: `netstat -ano | findstr :8080` i ubij proces |
+| Wagi nie działają | Nieaktywne warianty w teście | Sprawdź `isActive` przy każdym wariancie |
+| Endpoint niewybierany | `alive=false` lub `isActive=false` | Zaktualizuj status przez API |
 
 ## 📄 Licencja
+Projekt jest własnością zespołu „Projekt Zespołowy”. Wewnętrzne użycie edukacyjne – brak publicznej licencji.
 
-Projekt jest własnością zespołu Projekt Zespołowy.
+## 🗂 Historia Zmian
+- 2025-11-16 – Pierwsza wersja dokumentacji frontendu
+- 2025-11-24 – Rozszerzenie dokumentacji o backend, routing, scenariusz demo, troubleshooting
 
 ---
 
-**Ostatnia aktualizacja:** 16 listopada 2025
+**Ostatnia aktualizacja:** 24 listopada 2025
