@@ -14,7 +14,7 @@ interface VariantFieldProps {
 
 function VariantField({ onDelete }: VariantFieldProps) {
   const [variantExpanded, setVariantExpanded] = useState(true);
-  const [isDisabled, setIsDisabled] = useState(false);
+  const [isActive, setIsActive] = useState(true);
   const [urlFields, setUrlFields] = useState<number[]>([]);
   const [urlExpanded, setUrlExpanded] = useState(true);
 
@@ -22,8 +22,8 @@ function VariantField({ onDelete }: VariantFieldProps) {
     setUrlFields(prev => [...prev, prev.length]);
   };
 
-  const toggleDisabled = () => {
-    setIsDisabled(prev => !prev);
+  const toggleActive = () => {
+    setIsActive(prev => !prev);
   };
 
   const removeUrlField = (idToRemove: number) => {
@@ -37,9 +37,9 @@ function VariantField({ onDelete }: VariantFieldProps) {
           <ExpandMoreIcon />
         </IconButton>
         <div className="variant_controls">
-          <Checkbox checked={isDisabled} onChange={toggleDisabled} size="small" onClick={(e) => e.stopPropagation()} />
-          <TextField label="Variant Name" variant="outlined" size="small" onClick={(e) => e.stopPropagation()} />
-          <ExampleNumberField min={0} defaultValue={5} disabled={isDisabled} />
+          <Checkbox checked={isActive} onChange={toggleActive} size="small" onClick={(e) => e.stopPropagation()} />
+          <TextField label="Variant Name" variant="outlined" fullWidth size="small"  onClick={(e) => e.stopPropagation()} />
+          <ExampleNumberField min={0} defaultValue={5} disabled={!isActive} />
         </div>
         <IconButton color="error" onClick={(e) => { e.stopPropagation(); onDelete?.(); }} aria-label="delete-variant" size="small">
           <DeleteIcon />
@@ -59,7 +59,7 @@ function VariantField({ onDelete }: VariantFieldProps) {
             <Collapse in={urlExpanded}>
               <div id="variant_url_fields">
                 {urlFields.map((id) => (
-                  <UrlField key={id} disabled={isDisabled} onDelete={() => removeUrlField(id)} />
+                  <UrlField key={id} disabled={!isActive} onDelete={() => removeUrlField(id)} />
                 ))}
               </div>
               <Button variant="outlined" onClick={addUrlField} size="small">+ Add URL Field</Button>

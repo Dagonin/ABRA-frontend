@@ -1,6 +1,6 @@
 import { Delete } from "@mui/icons-material";
-import { TextField, IconButton } from "@mui/material";
-import React from "react";
+import { TextField, IconButton, Checkbox } from "@mui/material";
+import React, { useState } from "react";
 import './UrlField.css';
 
 interface UrlFieldProps {
@@ -9,10 +9,13 @@ interface UrlFieldProps {
 }
 
 function UrlField({ disabled = false, onDelete }: UrlFieldProps) {
+  const [isActive, setIsActive] = useState(true);
+
   return (
     <div className="url_field_container">
-      <TextField id="outlined-basic" label="URL" variant="outlined" disabled={disabled} fullWidth />         
-      <IconButton color="error" onClick={onDelete} aria-label="delete-url-field"><Delete /></IconButton>
+      <Checkbox checked={isActive} onChange={() => setIsActive(prev => !prev)} size="small" onClick={(e) => e.stopPropagation()} />
+      <TextField id="outlined-basic" label="URL" variant="outlined" disabled={disabled || !isActive} fullWidth />         
+      <IconButton color="error" onClick={(e) => { e.stopPropagation(); onDelete?.(); }} aria-label="delete-url-field"><Delete /></IconButton>
     </div>
   )
 }
