@@ -10,12 +10,21 @@ import styles from './NumberField.module.css';
 interface NumberFieldProps {
   min?: number;
   max?: number;
+  value?: number;
   defaultValue?: number;
   disabled?: boolean;
+  onChange?: (value: number) => void;
 }
 
-export default function ExampleNumberField({ min = 0, max = 100, defaultValue = 10, disabled = false }: NumberFieldProps) {
+export default function ExampleNumberField({ min = 0, max = 100, value, defaultValue = 10, disabled = false, onChange }: NumberFieldProps) {
   const id = React.useId();
+  const [internalValue, setInternalValue] = React.useState(value ?? defaultValue);
+  
+  const handleChange = (newValue: number) => {
+    setInternalValue(newValue);
+    onChange?.(newValue);
+  };
+  
   return (
     
     <NumberField.Root 
@@ -23,7 +32,8 @@ export default function ExampleNumberField({ min = 0, max = 100, defaultValue = 
       max={max}
       id={id} 
       disabled={disabled}
-      defaultValue={defaultValue} 
+      value={value ?? internalValue}
+      onValueChange={handleChange}
       className={styles.Field}
       >
 

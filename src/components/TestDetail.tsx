@@ -1,20 +1,26 @@
-import React from 'react';
 import TestField from './TestField';
+import type { TestModel, VariantModel } from '../services/api';
 
 interface TestDetailProps {
-  domainId: number;
-  testId: number;
-  testData: { id: number; name: string; active?: boolean };
-  onSave: (updated: { name?: string; active?: boolean }) => void;
+  testData: TestModel;
+  onSave: (updated: { name?: string; active?: boolean; description?: string; subpath?: string; variantModels?: VariantModel[] }) => void;
   onDelete: () => void;
 }
 
-export default function TestDetail({ domainId, testId, testData, onSave, onDelete }: TestDetailProps) {
+export default function TestDetail({ testData, onSave, onDelete }: TestDetailProps) {
   return (
     <div>
       <h3 style={{ color: "black" }}>Test Details</h3>
       <div style={{ marginTop: 8 }}>
-        <TestField initialName={testData.name} initialActive={!!testData.active} onSave={onSave} onDelete={onDelete} />
+        <TestField
+          initialName={testData.name}
+          initialActive={!!testData.active}
+          initialDescription={testData.description}
+          initialSubpath={testData.subpath}
+          initialVariants={testData.variantModels ?? []}
+          onSave={onSave}
+          onDelete={onDelete}
+        />
       </div>
     </div>
   );

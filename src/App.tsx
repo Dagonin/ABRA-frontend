@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import './App.css'
 import Fab from '@mui/material/Fab'
 import AddIcon from '@mui/icons-material/Add';
@@ -8,80 +8,344 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TextField from '@mui/material/TextField';
+import { domainAPI, testAPI, endpointAPI, variantAPI } from './services/api';
 
 
 function App() {
-  type TestItem = { id: number; name: string; active: boolean };
-  type DomainItem = { id: number; name: string; active: boolean; tests: TestItem[]; urls: string[] };
+  const [domains, setDomains] = useState<import('./services/api').DomainModel[]>([]);
+  const [selected, setSelected] = useState<{ domainId: string; testId: string } | null>(null);
 
-  const [domains, setDomains] = useState<DomainItem[]>([]);
-  const [selected, setSelected] = useState<{ domainId: number; testId: number } | null>(null);
+  // Fetch domains from API on mount
+  useEffect(() => {
+    const fetchDomains = async () => {
+      try {
+        const data = await domainAPI.getAll();
+        console.log('Fetched domains from API:', data);
+        setDomains(data);
+      } catch (error) {
+        console.error('Failed to fetch domains', error);
+      }
+    };
+    fetchDomains();
+  }, []);
 
-  const addDomain = () => {
-    setDomains(prev => [...prev, { id: prev.length, name: `Domain ${prev.length + 1}`, active: true, tests: [], urls: [] }]);
+  // Domain CRUD operations using API
+  const refreshDomains = async () => {
+    try {
+      const data = await domainAPI.getAll();
+      console.log('Refreshed domains from API:', data);
+      setDomains(data);
+    } catch (error) {
+      console.error('Failed to refresh domains', error);
+    }
   };
 
-  const removeDomain = (idToRemove: number) => {
-    setDomains(prev => prev.filter(d => d.id !== idToRemove));
-    setSelected(s => (s && s.domainId === idToRemove ? null : s));
+  const addDomain = async () => {
+    try {
+      const newDomain = { host: `Domain ${domains.length + 1}`, active: true };
+      await domainAPI.create(newDomain);
+      await refreshDomains();
+    } catch (error) {
+      console.error('Failed to add domain', error);
+    }
   };
 
-  const addTestToDomain = (domainId: number) => {
-    setDomains(prev => prev.map(d => d.id === domainId ? { ...d, tests: [...d.tests, { id: d.tests.length, name: `Test ${d.tests.length + 1}`, active: true }] } : d));
+  const removeDomain = async (domainId: string) => {
+    try {
+      await domainAPI.delete(domainId);
+      setSelected(s => (s && s.domainId === domainId ? null : s));
+      await refreshDomains();
+    } catch (error) {
+      console.error('Failed to remove domain', error);
+    }
   };
 
-  const toggleDomainActive = (domainId: number) => {
-    setDomains(prev => prev.map(d => d.id === domainId ? { ...d, active: !d.active } : d));
+  const handleDomainNameChange = (domainId: string, newName: string) => {
+    setDomains(prevDomains =>
+      prevDomains.map(d => (d.domain_id === domainId ? { ...d, host: newName } : d))
+    );
   };
 
-  const toggleTestActive = (domainId: number, testId: number) => {
-    setDomains(prev => prev.map(d => d.id === domainId ? { ...d, tests: d.tests.map(t => t.id === testId ? { ...t, active: !t.active } : t) } : d));
+  const persistDomainName = async (domainId: string) => {
+    try {
+      const domain = domains.find(d => d.domain_id === domainId);
+      if (!domain) return;
+      // This function is called on blur/enter, so it's not firing on every keystroke.
+      // It sends the current state of the domain host to the backend.
+      const { tests, defaultEndpoints, ...domainToUpdate } = domain;
+      await domainAPI.update(domainId, domainToUpdate);
+      await refreshDomains();
+    } catch (error) {
+      console.error('Failed to update domain name', error);
+    }
   };
 
-  const updateDomainName = (domainId: number, newName: string) => {
-    setDomains(prev => prev.map(d => d.id === domainId ? { ...d, name: newName } : d));
+  const toggleDomainActive = async (domainId: string) => {
+    try {
+      const domain = domains.find(d => d.domain_id === domainId);
+      if (!domain) return;
+      const { tests, defaultEndpoints, ...domainToUpdate } = domain;
+      await domainAPI.update(domainId, { ...domainToUpdate, active: !domain.active });
+      await refreshDomains();
+    } catch (error) {
+      console.error('Failed to toggle domain active', error);
+    }
   };
 
-  const addDomainUrl = (domainId: number) => {
-    setDomains(prev => prev.map(d => d.id === domainId ? { ...d, urls: [...d.urls, ''] } : d));
+  // Test CRUD operations using API
+  const addTestToDomain = async (domainId: string) => {
+    try {
+      const domain = domains.find(d => d.domain_id === domainId);
+      if (!domain) return;
+      const newTest = { name: `Test ${(domain.tests?.length ?? 0) + 1}`, active: true, domainModel: domain };
+      await testAPI.create(newTest);
+      await refreshDomains();
+    } catch (error) {
+      console.error('Failed to add test', error);
+    }
   };
 
-  const updateDomainUrl = (domainId: number, index: number, value: string) => {
-    setDomains(prev => prev.map(d => {
-      if (d.id !== domainId) return d;
-      const urls = [...d.urls];
-      urls[index] = value;
-      return { ...d, urls };
-    }));
+  const toggleTestActive = async (domainId: string, testId: string) => {
+    try {
+      const domain = domains.find(d => d.domain_id === domainId);
+      const test = domain?.tests?.find(t => t.test_id === testId);
+      if (!test) return;
+      await testAPI.update(testId, {
+        ...test,
+        active: !test.active,
+        domainModel: { domain_id: domainId }
+      } as any);
+      await refreshDomains();
+    } catch (error) {
+      console.error('Failed to toggle test active', error);
+    }
   };
 
-  const removeDomainUrl = (domainId: number, index: number) => {
-    setDomains(prev => prev.map(d => {
-      if (d.id !== domainId) return d;
-      const urls = d.urls.filter((_, i) => i !== index);
-      return { ...d, urls };
-    }));
-  };
+  const saveTest = async (
+    domainId: string,
+    testId: string,
+    updated: { name?: string; active?: boolean; description?: string; subpath?: string; variantModels?: any[] }
+  ) => {
+    try {
+      const domain = domains.find(d => d.domain_id === domainId);
+      const test = domain?.tests?.find(t => t.test_id === testId);
+      if (!test) return;
 
-  const selectTest = (domainId: number, testId: number) => {
-    setSelected({ domainId, testId });
-  };
-
-  const closeDetail = () => setSelected(null);
-
-  const saveTest = (domainId: number, testId: number, updated: { name?: string; active?: boolean }) => {
-    setDomains(prev => prev.map(d => {
-      if (d.id !== domainId) return d;
-      return {
-        ...d,
-        tests: d.tests.map(t => t.id === testId ? { ...t, name: updated.name ?? t.name, active: updated.active ?? t.active } : t)
+      // 1. Update the test's scalar properties (name, active, etc.)
+      const testPayload = {
+        test_id: testId,
+        name: updated.name ?? test.name,
+        active: updated.active ?? test.active,
+        description: updated.description ?? test.description,
+        subpath: updated.subpath ?? test.subpath,
+        domainModel: { domain_id: domainId },
       };
+      await testAPI.update(testId, testPayload as any);
+
+      // 2. Synchronize variants and their nested endpoints
+      const originalVariants = test.variantModels ?? [];
+      const updatedVariants = updated.variantModels ?? [];
+      const originalVariantIds = new Set(originalVariants.map(v => v.variant_id));
+      const updatedVariantIds = new Set(updatedVariants.map(v => v.variant_id).filter(Boolean));
+
+      // 2a. Delete variants that are no longer present
+      for (const originalVariant of originalVariants) {
+        if (originalVariant.variant_id && !updatedVariantIds.has(originalVariant.variant_id)) {
+          await variantAPI.delete(originalVariant.variant_id);
+        }
+      }
+
+      // 2b. Create or update variants
+      for (const variantData of updatedVariants) {
+        const variantPayload = {
+          name: variantData.name,
+          active: variantData.active,
+          weight: variantData.weight,
+          description: variantData.description,
+        };
+
+        let currentVariantId = variantData.variant_id;
+
+        if (currentVariantId) { // Update existing variant
+          await variantAPI.update(currentVariantId, variantPayload as any);
+        } else { // Create new variant
+          const newVariant = await variantAPI.create({ ...variantPayload, testModel: { test_id: testId } });
+          currentVariantId = newVariant.variant_id;
+        }
+
+        // 3. Synchronize endpoints for the current variant
+        if (currentVariantId) {
+          const originalVariant = originalVariants.find(v => v.variant_id === currentVariantId);
+          const originalEndpoints = originalVariant?.endpointModels ?? [];
+          const updatedEndpoints = variantData.endpointModels ?? [];
+          const originalEndpointIds = new Set(originalEndpoints.map(e => (e as any).endpoint_id));
+          const updatedEndpointIds = new Set(updatedEndpoints.map(e => (e as any).endpoint_id).filter(Boolean));
+
+          // 3a. Delete endpoints
+          for (const originalEndpoint of originalEndpoints) {
+            const originalId = (originalEndpoint as any).endpoint_id;
+            if (originalId && !updatedEndpointIds.has(originalId)) {
+              await endpointAPI.delete(originalId);
+            }
+          }
+
+          // 3b. Create or update endpoints
+          for (const endpointData of updatedEndpoints) {
+            const endpointPayload = { url: endpointData.url, active: endpointData.active };
+            const endpointId = (endpointData as any).endpoint_id;
+            if (endpointId) { // Update
+              await endpointAPI.update(endpointId, endpointPayload as any);
+            } else { // Create
+              await endpointAPI.create({ ...endpointPayload, variantModel: { variant_id: currentVariantId } });
+            }
+          }
+        }
+      }
+
+      // 4. Refresh state from server to get a consistent view
+      await refreshDomains();
+    } catch (error) {
+      console.error('Failed to save test', error);
+    }
+  };
+
+  const deleteTest = async (domainId: string, testId: string) => {
+    try {
+      await testAPI.delete(testId);
+      setSelected(s => (s && s.domainId === domainId && s.testId === testId ? null : s));
+      await refreshDomains();
+    } catch (error) {
+      console.error('Failed to delete test', error);
+    }
+  };
+  // Add a url field locally; persist when user enters a URL
+  const addDomainUrl = async (domainId: string) => {
+    setDomains(prev => prev.map(d => {
+      if (d.domain_id !== domainId) return d;
+      let eps = d.defaultEndpoints ?? [];
+      // Remove any accidental trailing empty fields
+      eps = eps.filter((e, i, arr) => i === arr.length - 1 ? true : e.url && e.url.trim() !== '');
+      // Only add if all current fields are filled (no empty url fields)
+      if (eps.some(e => !e.url || e.url.trim() === '')) return { ...d, defaultEndpoints: eps };
+      return { ...d, defaultEndpoints: [...eps, { url: '', active: true }] };
     }));
   };
 
-  const deleteTest = (domainId: number, testId: number) => {
-    setDomains(prev => prev.map(d => d.id === domainId ? { ...d, tests: d.tests.filter(t => t.id !== testId) } : d));
-    setSelected(s => (s && s.domainId === domainId && s.testId === testId ? null : s));
+  // local update only (no network) — use persistDomainUrl on blur/enter
+  const updateDomainUrl = (domainId: string, idx: number, value: string) => {
+    setDomains(prev => prev.map(d => {
+      if (d.domain_id !== domainId) return d;
+      const eps = [...(d.defaultEndpoints ?? [])];
+      eps[idx] = { ...eps[idx], url: value };
+      return { ...d, defaultEndpoints: eps };
+    }));
+  };
+
+  const persistDomainUrl = async (domainId: string, idx: number) => {
+    const domain = domains.find(d => d.domain_id === domainId);
+    if (!domain || !domain.defaultEndpoints) return;
+    const ep = domain.defaultEndpoints[idx];
+    if (!ep) return;
+    const newUrl = (ep.url || '').trim();
+
+    // If the field is empty, remove it from the list
+    if (!newUrl) {
+      setDomains(prev => prev.map(d => {
+        if (d.domain_id !== domainId) return d;
+        const eps = [...(d.defaultEndpoints ?? [])];
+        eps.splice(idx, 1);
+        return { ...d, defaultEndpoints: eps };
+      }));
+      return;
+    }
+
+    try {
+      // If endpoint existed previously and had a URL different from newUrl, perform delete+create to rename safely
+      // We'll detect existence by checking whether backend knows this URL — optimistic approach: if ep.url (before editing) was empty, create; otherwise delete old and create new
+      // To detect old URL we can attempt to find an endpoint with same url in previous state — but for simplicity use a best-effort strategy:
+      // If any existing endpoint in fetched domains has the same url, update it; otherwise create.
+      const existing = (domain.defaultEndpoints ?? []).find((e, i) => i !== idx && e.url === newUrl);
+      if (existing) {
+        // already exists elsewhere — nothing to do
+        await refreshDomains();
+        return;
+      }
+
+      // If ep had an original URL that is falsy, treat as create
+      // (Note: we don't have the pre-edit value here; this is best-effort)
+      await endpointAPI.create({ url: newUrl, active: ep.active ?? true, domainModel: { domain_id: domainId } });
+      await refreshDomains();
+    } catch (error) {
+      console.error('Failed to persist domain URL', error);
+    }
+  };
+
+  const removeDomainUrl = async (domainId: string, idx: number) => {
+    // Remove locally first
+    let removedUrl: string | undefined;
+    setDomains(prev => prev.map(d => {
+      if (d.domain_id !== domainId) return d;
+      const eps = [...(d.defaultEndpoints ?? [])];
+      removedUrl = eps[idx]?.url;
+      eps.splice(idx, 1);
+      return { ...d, defaultEndpoints: eps };
+    }));
+
+    try {
+      if (removedUrl) {
+        await endpointAPI.delete(removedUrl);
+      }
+      await refreshDomains();
+    } catch (error) {
+      console.error('Failed to remove domain URL', error);
+    }
+  };
+
+  const saveDomainUrls = async (domainId: string) => {
+    try {
+      // Fetch fresh domain data from server to compare
+      const freshDomain = await domainAPI.getById(domainId);
+      const serverUrls = new Set((freshDomain.defaultEndpoints ?? []).map(e => e.url));
+      
+      const domain = domains.find(d => d.domain_id === domainId);
+      if (!domain || !domain.defaultEndpoints) return;
+
+      const localUrls = new Set(domain.defaultEndpoints.map(e => e.url).filter(u => u && u.trim() !== ''));
+
+      // Delete URLs that were in server but not in local state
+      for (const serverUrl of serverUrls) {
+        if (!localUrls.has(serverUrl)) {
+          try {
+            await endpointAPI.delete(serverUrl);
+          } catch (e) {
+            console.error('Failed to delete URL:', serverUrl, e);
+          }
+        }
+      }
+
+      // Create URLs that are in local state but not in server
+      for (const endpoint of domain.defaultEndpoints) {
+        const trimmedUrl = (endpoint.url || '').trim();
+        if (trimmedUrl && !serverUrls.has(trimmedUrl)) {
+          try {
+            await endpointAPI.create({ url: trimmedUrl, active: endpoint.active ?? true, domainModel: { domain_id: domainId } });
+          } catch (e) {
+            console.error('Failed to create URL:', trimmedUrl, e);
+          }
+        }
+      }
+
+      // Remove empty fields from local state
+      setDomains(prev => prev.map(d => {
+        if (d.domain_id !== domainId) return d;
+        const eps = (d.defaultEndpoints ?? []).filter(e => e.url && e.url.trim() !== '');
+        return { ...d, defaultEndpoints: eps };
+      }));
+
+      await refreshDomains();
+    } catch (error) {
+      console.error('Failed to save domain URLs', error);
+    }
   };
 
   return (
@@ -99,26 +363,32 @@ function App() {
         <div id="domains_and_details">
           <div id="domain_list">
             {domains.map(domain => (
-              <div className="domain_card" key={domain.id}>
+              <div className="domain_card" key={domain.domain_id}>
                 <div className="domain_card_header">
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8, width: '100%' }}>
-                    <Checkbox checked={domain.active} onChange={() => toggleDomainActive(domain.id)} onClick={(e) => e.stopPropagation()} size="small" />
-                    <TextField value={domain.name} size="small" variant="standard" onChange={(e) => updateDomainName(domain.id, e.target.value)} style={{ flex: 1 }} onClick={(e) => e.stopPropagation()} />
+                    <Checkbox checked={domain.active} onChange={() => toggleDomainActive(domain.domain_id)} onClick={(e) => e.stopPropagation()} size="small" />
+                    <TextField value={domain.host} size="small" variant="standard"
+                      onChange={(e) => handleDomainNameChange(domain.domain_id, e.target.value)}
+                      onBlur={() => persistDomainName(domain.domain_id)}
+                      onKeyDown={(e) => { if (e.key === 'Enter') (e.target as HTMLInputElement).blur(); }}
+                      style={{ flex: 1 }}
+                      onClick={(e) => e.stopPropagation()}
+                    />
                   </div>
                   <div className="domain_actions">
-                    <Button size="small" variant="outlined" onClick={() => addTestToDomain(domain.id)}>+ Test</Button>
-                    <IconButton size="small" color="error" onClick={() => removeDomain(domain.id)} aria-label="delete-domain"><DeleteIcon /></IconButton>
+                    <Button size="small" variant="outlined" onClick={() => addTestToDomain(domain.domain_id)}>+ Test</Button>
+                    <IconButton size="small" color="error" onClick={() => removeDomain(domain.domain_id)} aria-label="delete-domain"><DeleteIcon /></IconButton>
                   </div>
                 </div>
 
                 <ul className="test_list">
-                  {domain.tests.map(test => (
-                    <li key={test.id} className="test_list_item">
+                  {(domain.tests ?? []).map(test => (
+                    <li key={test.test_id} className="test_list_item">
                       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                        <Checkbox checked={test.active} onChange={() => toggleTestActive(domain.id, test.id)} onClick={(e) => e.stopPropagation()} size="small" />
+                        <Checkbox checked={test.active} onChange={() => toggleTestActive(domain.domain_id, test.test_id)} onClick={(e) => e.stopPropagation()} size="small" />
                         <span style={{ color: "black" }} className="test_name">{test.name}</span>
                       </div>
-                      <Button size="small" variant="text" onClick={() => selectTest(domain.id, test.id)}>Details</Button>
+                      <Button size="small" variant="text" onClick={() => setSelected({ domainId: domain.domain_id, testId: test.test_id })}>Details</Button>
                     </li>
                   ))}
                 </ul>
@@ -126,13 +396,19 @@ function App() {
                 <div style={{ marginTop: 8 }}>
                   <div style={{ fontSize: 12, fontWeight: 600, color: '#555', marginBottom: 6 }}>Domain URLs</div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {domain.urls.map((u, idx) => (
+                    {(domain.defaultEndpoints ?? []).map((endpoint, idx) => (
                       <div key={idx} style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <TextField value={u} size="small" variant="outlined" fullWidth onChange={(e) => updateDomainUrl(domain.id, idx, e.target.value)} />
-                        <IconButton size="small" color="error" onClick={() => removeDomainUrl(domain.id, idx)} aria-label="delete-url"> <DeleteIcon /> </IconButton>
+                        <TextField value={endpoint.url} size="small" variant="outlined" fullWidth
+                          onChange={(e) => updateDomainUrl(domain.domain_id, idx, e.target.value)}
+                          onKeyDown={(e) => { if (e.key === 'Enter') { (e.target as HTMLInputElement).blur(); } }}
+                        />
+                        <IconButton size="small" color="error" onClick={() => removeDomainUrl(domain.domain_id, idx)} aria-label="delete-url"> <DeleteIcon /> </IconButton>
                       </div>
                     ))}
-                    <Button size="small" variant="text" onClick={() => addDomainUrl(domain.id)}>+ Add URL</Button>
+                    <div style={{ display: 'flex', gap: 4 }}>
+                      <Button size="small" variant="text" onClick={() => addDomainUrl(domain.domain_id)}>+ Add URL</Button>
+                      <Button size="small" variant="contained" onClick={() => saveDomainUrls(domain.domain_id)}>Save URLs</Button>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -142,18 +418,20 @@ function App() {
           <div id="detail_panel">
             {selected ? (
               <div className="detail_container">
-                <button className="close_detail" onClick={closeDetail}>Close</button>
+                <button className="close_detail" onClick={() => setSelected(null)}>Close</button>
                 {(() => {
-                  const domain = domains.find(d => d.id === selected.domainId);
-                  const test = domain?.tests.find(t => t.id === selected.testId);
+                  const domain = domains.find(d => d.domain_id === selected.domainId);
+                  const test = domain?.tests?.find(t => t.test_id === selected.testId);
                   if (!domain || !test) return <div className="detail_placeholder">Test not found</div>;
+                  console.log('Passing test data to TestDetail:', test);
+                  console.log('Test variantModels:', test.variantModels);
                   return (
                     <TestDetail
-                      domainId={domain.id}
-                      testId={test.id}
+                      domainId={domain.domain_id}
+                      testId={test.test_id}
                       testData={test}
-                      onSave={(updated) => saveTest(domain.id, test.id, updated)}
-                      onDelete={() => deleteTest(domain.id, test.id)}
+                      onSave={(updated) => saveTest(domain.domain_id, test.test_id, updated)}
+                      onDelete={() => deleteTest(domain.domain_id, test.test_id)}
                     />
                   );
                 })()}
