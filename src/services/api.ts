@@ -1,6 +1,7 @@
 // API service layer for backend communication
 
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || 'http://localhost:8080';
+const API_BASE_URL = `${String(API_BASE).replace(/\/$/, '')}/api`;
 
 // Types matching backend Java models exactly
 export interface EndpointModel {
@@ -9,8 +10,8 @@ export interface EndpointModel {
     active: boolean;
     description?: string;
     alive?: boolean;
-    variantModel?: VariantModel;
-    domainModel?: DomainModel;
+    variantModel?: Partial<VariantModel>;
+    domainModel?: Partial<DomainModel>;
 }
 
 export interface VariantModel {
@@ -19,7 +20,7 @@ export interface VariantModel {
     active: boolean;
     description?: string;
     weight: number;
-    testModel?: TestModel;
+    testModel?: Partial<TestModel>;
     endpointModels?: EndpointModel[];
 }
 
@@ -30,7 +31,7 @@ export interface TestModel {
     subpath?: string;
     description?: string;
     variantModels?: VariantModel[];
-    domainModel?: DomainModel;
+    domainModel?: Partial<DomainModel>;
 }
 
 export interface DomainModel {

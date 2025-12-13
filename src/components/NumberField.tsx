@@ -20,9 +20,10 @@ export default function ExampleNumberField({ min = 0, max = 100, value, defaultV
   const id = React.useId();
   const [internalValue, setInternalValue] = React.useState(value ?? defaultValue);
   
-  const handleChange = (newValue: number) => {
-    setInternalValue(newValue);
-    onChange?.(newValue);
+  const handleChange = (newValue: number | null) => {
+    const safeValue = newValue ?? min;
+    setInternalValue(safeValue);
+    onChange?.(safeValue);
   };
   
   return (

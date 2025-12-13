@@ -3,8 +3,8 @@ import type { TestModel, VariantModel } from '../services/api';
 
 interface TestDetailProps {
   testData: TestModel;
-  onSave: (updated: { name?: string; active?: boolean; description?: string; subpath?: string; variantModels?: VariantModel[] }) => void;
-  onDelete: () => void;
+  onSave: (updated: { name?: string; active?: boolean; description?: string; subpath?: string; variantModels?: VariantModel[] }) => void | Promise<void>;
+  onDelete: () => void | Promise<void>;
 }
 
 export default function TestDetail({ testData, onSave, onDelete }: TestDetailProps) {

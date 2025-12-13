@@ -15,15 +15,13 @@ function App() {
   const [domains, setDomains] = useState<import('./services/api').DomainModel[]>([]);
   const [selected, setSelected] = useState<{ domainId: string; testId: string } | null>(null);
 
-  // Fetch domains from API on mount
   useEffect(() => {
     const fetchDomains = async () => {
       try {
         const data = await domainAPI.getAll();
-        console.log('Fetched domains from API:', data);
         setDomains(data);
       } catch (error) {
-        console.error('Failed to fetch domains', error);
+        console.error(error);
       }
     };
     fetchDomains();
@@ -145,7 +143,6 @@ function App() {
       // 2. Synchronize variants and their nested endpoints
       const originalVariants = test.variantModels ?? [];
       const updatedVariants = updated.variantModels ?? [];
-      const originalVariantIds = new Set(originalVariants.map(v => v.variant_id));
       const updatedVariantIds = new Set(updatedVariants.map(v => v.variant_id).filter(Boolean));
 
       // 2a. Delete variants that are no longer present
@@ -178,8 +175,7 @@ function App() {
           const originalVariant = originalVariants.find(v => v.variant_id === currentVariantId);
           const originalEndpoints = originalVariant?.endpointModels ?? [];
           const updatedEndpoints = variantData.endpointModels ?? [];
-          const originalEndpointIds = new Set(originalEndpoints.map(e => (e as any).endpoint_id));
-          const updatedEndpointIds = new Set(updatedEndpoints.map(e => (e as any).endpoint_id).filter(Boolean));
+          const updatedEndpointIds = new Set(updatedEndpoints.map((e: any) => (e as any).endpoint_id).filter(Boolean));
 
           // 3a. Delete endpoints
           for (const originalEndpoint of originalEndpoints) {
@@ -239,45 +235,6 @@ function App() {
       eps[idx] = { ...eps[idx], url: value };
       return { ...d, defaultEndpoints: eps };
     }));
-  };
-
-  const persistDomainUrl = async (domainId: string, idx: number) => {
-    const domain = domains.find(d => d.domain_id === domainId);
-    if (!domain || !domain.defaultEndpoints) return;
-    const ep = domain.defaultEndpoints[idx];
-    if (!ep) return;
-    const newUrl = (ep.url || '').trim();
-
-    // If the field is empty, remove it from the list
-    if (!newUrl) {
-      setDomains(prev => prev.map(d => {
-        if (d.domain_id !== domainId) return d;
-        const eps = [...(d.defaultEndpoints ?? [])];
-        eps.splice(idx, 1);
-        return { ...d, defaultEndpoints: eps };
-      }));
-      return;
-    }
-
-    try {
-      // If endpoint existed previously and had a URL different from newUrl, perform delete+create to rename safely
-      // We'll detect existence by checking whether backend knows this URL — optimistic approach: if ep.url (before editing) was empty, create; otherwise delete old and create new
-      // To detect old URL we can attempt to find an endpoint with same url in previous state — but for simplicity use a best-effort strategy:
-      // If any existing endpoint in fetched domains has the same url, update it; otherwise create.
-      const existing = (domain.defaultEndpoints ?? []).find((e, i) => i !== idx && e.url === newUrl);
-      if (existing) {
-        // already exists elsewhere — nothing to do
-        await refreshDomains();
-        return;
-      }
-
-      // If ep had an original URL that is falsy, treat as create
-      // (Note: we don't have the pre-edit value here; this is best-effort)
-      await endpointAPI.create({ url: newUrl, active: ep.active ?? true, domainModel: { domain_id: domainId } });
-      await refreshDomains();
-    } catch (error) {
-      console.error('Failed to persist domain URL', error);
-    }
   };
 
   const removeDomainUrl = async (domainId: string, idx: number) => {
@@ -427,8 +384,6 @@ function App() {
                   console.log('Test variantModels:', test.variantModels);
                   return (
                     <TestDetail
-                      domainId={domain.domain_id}
-                      testId={test.test_id}
                       testData={test}
                       onSave={(updated) => saveTest(domain.domain_id, test.test_id, updated)}
                       onDelete={() => deleteTest(domain.domain_id, test.test_id)}
