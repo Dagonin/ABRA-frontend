@@ -62,7 +62,7 @@ function VariantField({ variant, onChange, onDelete }: VariantFieldProps) {
       name: v?.name ?? '',
       active: v?.active ?? true,
       description: v?.description ?? undefined,
-      weight: v?.weight ?? 0,
+      weight: v?.weight ?? 1,
       testModel: v?.testModel ?? undefined,
       endpointModels: Array.isArray(v?.endpointModels) ? v.endpointModels.map((e: any) => ({ url: e.url, active: !!e.active })) : [],
     });
@@ -90,7 +90,7 @@ function VariantField({ variant, onChange, onDelete }: VariantFieldProps) {
         <div className="variant_controls">
           <Checkbox checked={isActive} onChange={toggleActive} size="small" onClick={(e) => e.stopPropagation()} />
           <TextField label="Variant Name" variant="outlined" fullWidth size="small" value={name} onChange={(e) => { e.stopPropagation(); onNameChange(e.target.value); }} onClick={(e) => e.stopPropagation()} />
-          <ExampleNumberField min={0} value={weight} onChange={handleWeightChange} disabled={!isActive} />
+          <ExampleNumberField min={1} value={weight} onChange={handleWeightChange} disabled={!isActive} />
         </div>
         <IconButton color="error" onClick={(e) => { e.stopPropagation(); onDelete?.(); }} aria-label="delete-variant" size="small">
           <DeleteIcon />

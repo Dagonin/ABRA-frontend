@@ -27,29 +27,8 @@ function TestField({ initialName = '', initialActive = true, initialDescription,
   const [description, setDescription] = useState<string>(initialDescription ?? '');
   const [testUrl, setTestUrl] = useState<string>(initialSubpath ?? '');
 
-  console.log('TestField - initialVariants:', initialVariants);
-  console.log('TestField - variantModelsState:', variantModelsState);
-
-  useEffect(() => {
-    setName(initialName);
-    setIsActive(initialActive);
-  }, [initialName, initialActive]);
-
-  useEffect(() => {
-    setDescription(initialDescription ?? '');
-  }, [initialDescription]);
-
-  useEffect(() => {
-    setTestUrl(initialSubpath ?? '');
-  }, [initialSubpath]);
-
-  useEffect(() => {
-    console.log('TestField - useEffect for initialVariants triggered with:', initialVariants);
-    setVariantModelsState(initialVariants ?? []);
-  }, [initialVariants]);
-
   const addVariantField = () => {
-    setVariantModelsState(prev => [...prev, { variant_id: '', name: `Variant ${prev.length + 1}`, active: true, weight: 0 } as VariantModel]);
+    setVariantModelsState(prev => [...prev, { variant_id: '', name: `Variant ${prev.length + 1}`, active: true, weight: 1 } as VariantModel]);
   };
 
   const removeVariantField = (index: number) => {
@@ -66,7 +45,7 @@ function TestField({ initialName = '', initialActive = true, initialDescription,
       variant_id: v.variant_id || '',
       name: v.name || '',
       active: v.active ?? true,
-      weight: v.weight ?? 0,
+      weight: v.weight ?? 1,
       description: v.description,
       testModel: v.testModel,
       endpointModels: v.endpointModels || []
@@ -117,7 +96,12 @@ function TestField({ initialName = '', initialActive = true, initialDescription,
             <Collapse in={variantExpanded}>
               <div id="variant_fields">
                 {variantModelsState.map((v, idx) => (
-                  <VariantField key={idx} variant={v} onChange={(nv) => updateVariantAt(idx, nv)} onDelete={() => removeVariantField(idx)} />
+                  <VariantField
+                    key={v.variant_id || `new-${idx}`}
+                    variant={v}
+                    onChange={(nv) => updateVariantAt(idx, nv)}
+                    onDelete={() => removeVariantField(idx)}
+                  />
                 ))}
               </div>
               <Button variant="outlined" onClick={addVariantField} size="small">+ Add Variant Field</Button>

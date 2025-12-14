@@ -14,6 +14,7 @@ import { domainAPI, testAPI, endpointAPI, variantAPI } from './services/api';
 function App() {
   const [domains, setDomains] = useState<import('./services/api').DomainModel[]>([]);
   const [selected, setSelected] = useState<{ domainId: string; testId: string } | null>(null);
+  const [selectedTestDetails, setSelectedTestDetails] = useState<import('./services/api').TestModel | null>(null);
 
   useEffect(() => {
     const fetchDomains = async () => {
@@ -26,6 +27,28 @@ function App() {
     };
     fetchDomains();
   }, []);
+
+  useEffect(() => {
+    if (!selected) {
+      setSelectedTestDetails(null);
+      return;
+    }
+
+    const fetchTestDetails = async () => {
+      try {
+        // Fetch the test object itself to get the most up-to-date data,
+        // not just what's in the potentially stale domains list.
+        const testDetails = await testAPI.getById(selected.testId);
+        const variants = await variantAPI.getByTestId(selected.testId);
+        setSelectedTestDetails({ ...testDetails, variantModels: variants });
+      } catch (error) {
+        console.error('Failed to fetch test details', error);
+        setSelectedTestDetails(null); // On error, clear details to avoid showing stale data
+      }
+    };
+
+    fetchTestDetails();
+  }, [selected, domains]);
 
   // Domain CRUD operations using API
   const refreshDomains = async () => {
@@ -125,23 +148,25 @@ function App() {
     updated: { name?: string; active?: boolean; description?: string; subpath?: string; variantModels?: any[] }
   ) => {
     try {
-      const domain = domains.find(d => d.domain_id === domainId);
-      const test = domain?.tests?.find(t => t.test_id === testId);
-      if (!test) return;
+      if (!selectedTestDetails) {
+        console.error("Cannot save test: details not loaded.");
+        return;
+      }
 
       // 1. Update the test's scalar properties (name, active, etc.)
       const testPayload = {
         test_id: testId,
-        name: updated.name ?? test.name,
-        active: updated.active ?? test.active,
-        description: updated.description ?? test.description,
-        subpath: updated.subpath ?? test.subpath,
+        name: updated.name ?? selectedTestDetails.name,
+        active: updated.active ?? selectedTestDetails.active,
+        description: updated.description ?? selectedTestDetails.description,
+        subpath: updated.subpath ?? selectedTestDetails.subpath,
         domainModel: { domain_id: domainId },
+        variantModels: selectedTestDetails.variantModels ?? [], // Pass original variants to prevent deletion
       };
       await testAPI.update(testId, testPayload as any);
 
       // 2. Synchronize variants and their nested endpoints
-      const originalVariants = test.variantModels ?? [];
+      const originalVariants = selectedTestDetails.variantModels ?? [];
       const updatedVariants = updated.variantModels ?? [];
       const updatedVariantIds = new Set(updatedVariants.map(v => v.variant_id).filter(Boolean));
 
@@ -164,7 +189,11 @@ function App() {
         let currentVariantId = variantData.variant_id;
 
         if (currentVariantId) { // Update existing variant
-          await variantAPI.update(currentVariantId, variantPayload as any);
+          await variantAPI.update(currentVariantId, {
+            variant_id: currentVariantId, // Ensure ID is in the payload
+            ...variantPayload,
+            testModel: { test_id: testId },
+          } as any);
         } else { // Create new variant
           const newVariant = await variantAPI.create({ ...variantPayload, testModel: { test_id: testId } });
           currentVariantId = newVariant.variant_id;
@@ -190,7 +219,8 @@ function App() {
             const endpointPayload = { url: endpointData.url, active: endpointData.active };
             const endpointId = (endpointData as any).endpoint_id;
             if (endpointId) { // Update
-              await endpointAPI.update(endpointId, endpointPayload as any);
+              const originalEndpoint = originalEndpoints.find(e => (e as any).endpoint_id === endpointId);
+              await endpointAPI.update(endpointId, { ...originalEndpoint, ...endpointPayload, variantModel: { variant_id: currentVariantId } } as any);
             } else { // Create
               await endpointAPI.create({ ...endpointPayload, variantModel: { variant_id: currentVariantId } });
             }
@@ -202,6 +232,22 @@ function App() {
       await refreshDomains();
     } catch (error) {
       console.error('Failed to save test', error);
+    }
+  };
+
+  const deleteVariantEndpoint = async (endpointId: string) => {
+    try {
+      await endpointAPI.delete(endpointId);
+      // After deleting, refresh the test details to reflect the change in the UI.
+      if (selected) {
+        const testDetails = await testAPI.getById(selected.testId);
+        const variants = await variantAPI.getByTestId(selected.testId);
+        setSelectedTestDetails({ ...testDetails, variantModels: variants });
+      }
+    } catch (error) {
+      console.error('Failed to delete variant endpoint', error);
+      // Revert by fetching all data to ensure UI consistency after a failed delete.
+      await refreshDomains();
     }
   };
 
@@ -238,66 +284,63 @@ function App() {
   };
 
   const removeDomainUrl = async (domainId: string, idx: number) => {
-    // Remove locally first
-    let removedUrl: string | undefined;
+    // Find the endpoint to delete from the current state before any updates
+    const domain = domains.find(d => d.domain_id === domainId);
+    const endpointToDelete = domain?.defaultEndpoints?.[idx];
+
+    // Optimistically update the UI by removing the endpoint from local state
     setDomains(prev => prev.map(d => {
       if (d.domain_id !== domainId) return d;
       const eps = [...(d.defaultEndpoints ?? [])];
-      removedUrl = eps[idx]?.url;
       eps.splice(idx, 1);
       return { ...d, defaultEndpoints: eps };
     }));
 
-    try {
-      if (removedUrl) {
-        await endpointAPI.delete(removedUrl);
+    // If the endpoint was a persisted one (had an ID), delete it from the backend
+    console.log(endpointToDelete)
+    console.log(endpointToDelete?.url)
+    if (endpointToDelete?.url) {
+      try {
+        await endpointAPI.delete(endpointToDelete.url);
+      } catch (error) {
+        console.error('Failed to remove domain URL', error);
+        // If the API call fails, revert the optimistic update by refreshing from the server.
+        await refreshDomains();
       }
-      await refreshDomains();
-    } catch (error) {
-      console.error('Failed to remove domain URL', error);
     }
   };
 
   const saveDomainUrls = async (domainId: string) => {
     try {
-      // Fetch fresh domain data from server to compare
+      // Get the current state of endpoints for the domain from the server
       const freshDomain = await domainAPI.getById(domainId);
-      const serverUrls = new Set((freshDomain.defaultEndpoints ?? []).map(e => e.url));
-      
-      const domain = domains.find(d => d.domain_id === domainId);
-      if (!domain || !domain.defaultEndpoints) return;
+      const originalEndpoints = freshDomain.defaultEndpoints ?? [];
 
-      const localUrls = new Set(domain.defaultEndpoints.map(e => e.url).filter(u => u && u.trim() !== ''));
+      // Get the updated state of endpoints from the local UI state
+      const domainFromState = domains.find(d => d.domain_id === domainId);
+      if (!domainFromState) return;
+      const updatedEndpoints = (domainFromState.defaultEndpoints ?? []).filter(e => e.url && e.url.trim() !== '');
 
-      // Delete URLs that were in server but not in local state
-      for (const serverUrl of serverUrls) {
-        if (!localUrls.has(serverUrl)) {
-          try {
-            await endpointAPI.delete(serverUrl);
-          } catch (e) {
-            console.error('Failed to delete URL:', serverUrl, e);
-          }
+      const updatedEndpointIds = new Set(updatedEndpoints.map(e => e.endpoint_id).filter(Boolean));
+
+      // 1. Delete endpoints that are no longer present in the UI
+      for (const originalEndpoint of originalEndpoints) {
+        if (originalEndpoint.endpoint_id && !updatedEndpointIds.has(originalEndpoint.endpoint_id)) {
+          await endpointAPI.delete(originalEndpoint.endpoint_id);
         }
       }
 
-      // Create URLs that are in local state but not in server
-      for (const endpoint of domain.defaultEndpoints) {
-        const trimmedUrl = (endpoint.url || '').trim();
-        if (trimmedUrl && !serverUrls.has(trimmedUrl)) {
-          try {
-            await endpointAPI.create({ url: trimmedUrl, active: endpoint.active ?? true, domainModel: { domain_id: domainId } });
-          } catch (e) {
-            console.error('Failed to create URL:', trimmedUrl, e);
-          }
+      // 2. Create or update endpoints
+      for (const endpointData of updatedEndpoints) {
+        const endpointPayload = { url: endpointData.url, active: endpointData.active ?? true };
+
+        if (endpointData.endpoint_id) { // Update existing endpoint
+          const originalEndpoint = originalEndpoints.find(e => e.endpoint_id === endpointData.endpoint_id);
+          await endpointAPI.update(endpointData.endpoint_id, { ...originalEndpoint, ...endpointPayload, domainModel: { domain_id: domainId } } as any);
+        } else { // Create new endpoint
+          await endpointAPI.create({ ...endpointPayload, domainModel: { domain_id: domainId } });
         }
       }
-
-      // Remove empty fields from local state
-      setDomains(prev => prev.map(d => {
-        if (d.domain_id !== domainId) return d;
-        const eps = (d.defaultEndpoints ?? []).filter(e => e.url && e.url.trim() !== '');
-        return { ...d, defaultEndpoints: eps };
-      }));
 
       await refreshDomains();
     } catch (error) {
@@ -374,23 +417,22 @@ function App() {
 
           <div id="detail_panel">
             {selected ? (
-              <div className="detail_container">
-                <button className="close_detail" onClick={() => setSelected(null)}>Close</button>
-                {(() => {
-                  const domain = domains.find(d => d.domain_id === selected.domainId);
-                  const test = domain?.tests?.find(t => t.test_id === selected.testId);
-                  if (!domain || !test) return <div className="detail_placeholder">Test not found</div>;
-                  console.log('Passing test data to TestDetail:', test);
-                  console.log('Test variantModels:', test.variantModels);
-                  return (
-                    <TestDetail
-                      testData={test}
-                      onSave={(updated) => saveTest(domain.domain_id, test.test_id, updated)}
-                      onDelete={() => deleteTest(domain.domain_id, test.test_id)}
-                    />
-                  );
-                })()}
-              </div>
+              // Only render TestDetail if the fetched details match the selected test ID.
+              // This prevents showing stale data from a previous selection while new data is loading.
+              selectedTestDetails && selectedTestDetails.test_id === selected.testId ? (
+                <div className="detail_container">
+                  <button className="close_detail" onClick={() => setSelected(null)}>Close</button>
+                  <TestDetail
+                    key={selected.testId}
+                    testData={selectedTestDetails}
+                    onSave={(updated) => saveTest(selected.domainId, selected.testId, updated)}
+                    onEndpointDelete={deleteVariantEndpoint}
+                    onDelete={() => deleteTest(selected.domainId, selected.testId)}
+                  />
+                </div>
+              ) : (
+                <div className="detail_placeholder">Loading test details...</div>
+              )
             ) : (
               <div className="detail_placeholder">Select a test to view details</div>
             )}

@@ -143,6 +143,12 @@ export const variantAPI = {
         return response.json();
     },
 
+    getByTestId: async (testId: string): Promise<VariantModel[]> => {
+        const response = await fetch(`${API_BASE_URL}/variants/byTestId/${testId}`);
+        if (!response.ok) throw new Error('Failed to fetch variants for test');
+        return response.json();
+    },
+
     create: async (variant: Omit<VariantModel, 'variant_id'>): Promise<VariantModel> => {
         const url = `${API_BASE_URL}/variants`;
         const requestOptions = {
@@ -214,6 +220,7 @@ export const endpointAPI = {
     },
 
     delete: async (id: string): Promise<void> => {
+        console.log(`Deleting endpoint with ID: ${id}`);
         const response = await fetch(`${API_BASE_URL}/endpoints/${id}`, {
             method: 'DELETE',
         });

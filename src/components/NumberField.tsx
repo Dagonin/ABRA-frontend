@@ -16,7 +16,7 @@ interface NumberFieldProps {
   onChange?: (value: number) => void;
 }
 
-export default function ExampleNumberField({ min = 0, max = 100, value, defaultValue = 10, disabled = false, onChange }: NumberFieldProps) {
+export default function ExampleNumberField({ min = 1, max = 100, value, defaultValue = 10, disabled = false, onChange }: NumberFieldProps) {
   const id = React.useId();
   const [internalValue, setInternalValue] = React.useState(value ?? defaultValue);
   
@@ -40,7 +40,7 @@ export default function ExampleNumberField({ min = 0, max = 100, value, defaultV
 
       <NumberField.ScrubArea className={styles.ScrubArea}>
         <label htmlFor={id} className={styles.Label}>
-          Waga
+          Weight
         </label>
         <NumberField.ScrubAreaCursor className={styles.ScrubAreaCursor}>
           <CursorGrowIcon />
