@@ -8,59 +8,121 @@ import Button from '@mui/material/Button';
 import IconButton from '@mui/material/IconButton';
 import DeleteIcon from '@mui/icons-material/Delete';
 import TextField from '@mui/material/TextField';
-import { domainAPI, testAPI, endpointAPI, variantAPI } from './services/api';
+import LogoutIcon from '@mui/icons-material/Logout';
+import { domainAPI, testAPI, endpointAPI, variantAPI, authAPI, setAuthToken, getAuthToken } from './services/api';
 
+// Simple Login Component
+function Login({ onLogin }: { onLogin: () => void }) {
+  const [login, setLogin] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    try {
+      const data = await authAPI.login({ login, password });
+      setAuthToken(data.token);
+      onLogin();
+    } catch (err) {
+      setError('Invalid credentials');
+    }
+  };
+
+  return (
+    <div style={{
+      display: 'flex',
+      flexDirection: 'column',
+      gap: '1.5rem',
+      padding: '3rem',
+      maxWidth: '400px',
+      margin: '100px auto',
+      backgroundColor: 'white',
+      borderRadius: '8px',
+      boxShadow: '0 4px 12px rgba(0,0,0,0.1)'
+    }}>
+      <h2 style={{ margin: 0, textAlign: 'center', color: '#333' }}>ABRA Admin Login</h2>
+      {error && <div style={{ color: 'red', textAlign: 'center' }}>{error}</div>}
+      <TextField
+        label="Username"
+        variant="outlined"
+        value={login}
+        onChange={e => setLogin(e.target.value)}
+        fullWidth
+      />
+      <TextField
+        type="password"
+        label="Password"
+        variant="outlined"
+        value={password}
+        onChange={e => setPassword(e.target.value)}
+        fullWidth
+      />
+      <Button
+        variant="contained"
+        size="large"
+        onClick={handleSubmit}
+        fullWidth
+      >
+        Login
+      </Button>
+    </div>
+  );
+}
 
 function App() {
+  const [isAuthenticated, setIsAuthenticated] = useState(!!getAuthToken());
   const [domains, setDomains] = useState<import('./services/api').DomainModel[]>([]);
   const [selected, setSelected] = useState<{ domainId: string; testId: string } | null>(null);
   const [selectedTestDetails, setSelectedTestDetails] = useState<import('./services/api').TestModel | null>(null);
 
   useEffect(() => {
-    const fetchDomains = async () => {
-      try {
-        const data = await domainAPI.getAll();
-        setDomains(data);
-      } catch (error) {
-        console.error(error);
-      }
-    };
-    fetchDomains();
-  }, []);
+    if (isAuthenticated) {
+      refreshDomains();
+    }
+  }, [isAuthenticated]);
 
   useEffect(() => {
-    if (!selected) {
+    if (!selected || !isAuthenticated) {
       setSelectedTestDetails(null);
       return;
     }
 
     const fetchTestDetails = async () => {
       try {
-        // Fetch the test object itself to get the most up-to-date data,
-        // not just what's in the potentially stale domains list.
         const testDetails = await testAPI.getById(selected.testId);
         const variants = await variantAPI.getByTestId(selected.testId);
         setSelectedTestDetails({ ...testDetails, variantModels: variants });
       } catch (error) {
         console.error('Failed to fetch test details', error);
-        setSelectedTestDetails(null); // On error, clear details to avoid showing stale data
+        setSelectedTestDetails(null);
       }
     };
 
     fetchTestDetails();
-  }, [selected, domains]);
+  }, [selected, domains, isAuthenticated]);
 
-  // Domain CRUD operations using API
   const refreshDomains = async () => {
     try {
       const data = await domainAPI.getAll();
-      console.log('Refreshed domains from API:', data);
       setDomains(data);
     } catch (error) {
       console.error('Failed to refresh domains', error);
+      // If fetch fails with auth error, logout
+      if (getAuthToken()) {
+        // Optional: check error type
+      }
     }
   };
 
+  const handleLogout = () => {
+    setAuthToken(null);
+    setIsAuthenticated(false);
+    setDomains([]);
+    setSelected(null);
+  };
+
+  // --- Domain CRUD ---
   const addDomain = async () => {
     try {
       const newDomain = { host: `Domain ${domains.length + 1}`, active: true };
@@ -91,8 +153,6 @@ function App() {
     try {
       const domain = domains.find(d => d.domain_id === domainId);
       if (!domain) return;
-      // This function is called on blur/enter, so it's not firing on every keystroke.
-      // It sends the current state of the domain host to the backend.
       const { tests, defaultEndpoints, ...domainToUpdate } = domain;
       await domainAPI.update(domainId, domainToUpdate);
       await refreshDomains();
@@ -113,7 +173,7 @@ function App() {
     }
   };
 
-  // Test CRUD operations using API
+  // --- Test CRUD ---
   const addTestToDomain = async (domainId: string) => {
     try {
       const domain = domains.find(d => d.domain_id === domainId);
@@ -148,12 +208,8 @@ function App() {
     updated: { name?: string; active?: boolean; description?: string; subpath?: string; variantModels?: any[] }
   ) => {
     try {
-      if (!selectedTestDetails) {
-        console.error("Cannot save test: details not loaded.");
-        return;
-      }
+      if (!selectedTestDetails) return;
 
-      // 1. Update the test's scalar properties (name, active, etc.)
       const testPayload = {
         test_id: testId,
         name: updated.name ?? selectedTestDetails.name,
@@ -161,23 +217,20 @@ function App() {
         description: updated.description ?? selectedTestDetails.description,
         subpath: updated.subpath ?? selectedTestDetails.subpath,
         domainModel: { domain_id: domainId },
-        variantModels: selectedTestDetails.variantModels ?? [], // Pass original variants to prevent deletion
+        variantModels: selectedTestDetails.variantModels ?? [],
       };
       await testAPI.update(testId, testPayload as any);
 
-      // 2. Synchronize variants and their nested endpoints
       const originalVariants = selectedTestDetails.variantModels ?? [];
       const updatedVariants = updated.variantModels ?? [];
       const updatedVariantIds = new Set(updatedVariants.map(v => v.variant_id).filter(Boolean));
 
-      // 2a. Delete variants that are no longer present
       for (const originalVariant of originalVariants) {
         if (originalVariant.variant_id && !updatedVariantIds.has(originalVariant.variant_id)) {
           await variantAPI.delete(originalVariant.variant_id);
         }
       }
 
-      // 2b. Create or update variants
       for (const variantData of updatedVariants) {
         const variantPayload = {
           name: variantData.name,
@@ -188,25 +241,23 @@ function App() {
 
         let currentVariantId = variantData.variant_id;
 
-        if (currentVariantId) { // Update existing variant
+        if (currentVariantId) {
           await variantAPI.update(currentVariantId, {
-            variant_id: currentVariantId, // Ensure ID is in the payload
+            variant_id: currentVariantId,
             ...variantPayload,
             testModel: { test_id: testId },
           } as any);
-        } else { // Create new variant
+        } else {
           const newVariant = await variantAPI.create({ ...variantPayload, testModel: { test_id: testId } });
           currentVariantId = newVariant.variant_id;
         }
 
-        // 3. Synchronize endpoints for the current variant
         if (currentVariantId) {
           const originalVariant = originalVariants.find(v => v.variant_id === currentVariantId);
           const originalEndpoints = originalVariant?.endpointModels ?? [];
           const updatedEndpoints = variantData.endpointModels ?? [];
           const updatedEndpointIds = new Set(updatedEndpoints.map((e: any) => (e as any).endpoint_id).filter(Boolean));
 
-          // 3a. Delete endpoints
           for (const originalEndpoint of originalEndpoints) {
             const originalId = (originalEndpoint as any).endpoint_id;
             if (originalId && !updatedEndpointIds.has(originalId)) {
@@ -214,21 +265,18 @@ function App() {
             }
           }
 
-          // 3b. Create or update endpoints
           for (const endpointData of updatedEndpoints) {
             const endpointPayload = { url: endpointData.url, active: endpointData.active };
             const endpointId = (endpointData as any).endpoint_id;
-            if (endpointId) { // Update
+            if (endpointId) {
               const originalEndpoint = originalEndpoints.find(e => (e as any).endpoint_id === endpointId);
               await endpointAPI.update(endpointId, { ...originalEndpoint, ...endpointPayload, variantModel: { variant_id: currentVariantId } } as any);
-            } else { // Create
+            } else {
               await endpointAPI.create({ ...endpointPayload, variantModel: { variant_id: currentVariantId } });
             }
           }
         }
       }
-
-      // 4. Refresh state from server to get a consistent view
       await refreshDomains();
     } catch (error) {
       console.error('Failed to save test', error);
@@ -238,7 +286,6 @@ function App() {
   const deleteVariantEndpoint = async (endpointId: string) => {
     try {
       await endpointAPI.delete(endpointId);
-      // After deleting, refresh the test details to reflect the change in the UI.
       if (selected) {
         const testDetails = await testAPI.getById(selected.testId);
         const variants = await variantAPI.getByTestId(selected.testId);
@@ -246,7 +293,6 @@ function App() {
       }
     } catch (error) {
       console.error('Failed to delete variant endpoint', error);
-      // Revert by fetching all data to ensure UI consistency after a failed delete.
       await refreshDomains();
     }
   };
@@ -260,20 +306,18 @@ function App() {
       console.error('Failed to delete test', error);
     }
   };
-  // Add a url field locally; persist when user enters a URL
+
+  // --- Domain URL CRUD ---
   const addDomainUrl = async (domainId: string) => {
     setDomains(prev => prev.map(d => {
       if (d.domain_id !== domainId) return d;
       let eps = d.defaultEndpoints ?? [];
-      // Remove any accidental trailing empty fields
       eps = eps.filter((e, i, arr) => i === arr.length - 1 ? true : e.url && e.url.trim() !== '');
-      // Only add if all current fields are filled (no empty url fields)
       if (eps.some(e => !e.url || e.url.trim() === '')) return { ...d, defaultEndpoints: eps };
       return { ...d, defaultEndpoints: [...eps, { url: '', active: true }] };
     }));
   };
 
-  // local update only (no network) — use persistDomainUrl on blur/enter
   const updateDomainUrl = (domainId: string, idx: number, value: string) => {
     setDomains(prev => prev.map(d => {
       if (d.domain_id !== domainId) return d;
@@ -284,11 +328,9 @@ function App() {
   };
 
   const removeDomainUrl = async (domainId: string, idx: number) => {
-    // Find the endpoint to delete from the current state before any updates
     const domain = domains.find(d => d.domain_id === domainId);
     const endpointToDelete = domain?.defaultEndpoints?.[idx];
 
-    // Optimistically update the UI by removing the endpoint from local state
     setDomains(prev => prev.map(d => {
       if (d.domain_id !== domainId) return d;
       const eps = [...(d.defaultEndpoints ?? [])];
@@ -296,15 +338,11 @@ function App() {
       return { ...d, defaultEndpoints: eps };
     }));
 
-    // If the endpoint was a persisted one (had an ID), delete it from the backend
-    console.log(endpointToDelete)
-    console.log(endpointToDelete?.url)
     if (endpointToDelete?.url) {
       try {
-        await endpointAPI.delete(endpointToDelete.url);
+        await endpointAPI.delete(endpointToDelete.url); // Note: Check if API expects ID or URL. Assuming ID based on previous code.
       } catch (error) {
         console.error('Failed to remove domain URL', error);
-        // If the API call fails, revert the optimistic update by refreshing from the server.
         await refreshDomains();
       }
     }
@@ -312,48 +350,56 @@ function App() {
 
   const saveDomainUrls = async (domainId: string) => {
     try {
-      // Get the current state of endpoints for the domain from the server
       const freshDomain = await domainAPI.getById(domainId);
       const originalEndpoints = freshDomain.defaultEndpoints ?? [];
-
-      // Get the updated state of endpoints from the local UI state
       const domainFromState = domains.find(d => d.domain_id === domainId);
       if (!domainFromState) return;
       const updatedEndpoints = (domainFromState.defaultEndpoints ?? []).filter(e => e.url && e.url.trim() !== '');
-
       const updatedEndpointIds = new Set(updatedEndpoints.map(e => e.endpoint_id).filter(Boolean));
 
-      // 1. Delete endpoints that are no longer present in the UI
       for (const originalEndpoint of originalEndpoints) {
         if (originalEndpoint.endpoint_id && !updatedEndpointIds.has(originalEndpoint.endpoint_id)) {
           await endpointAPI.delete(originalEndpoint.endpoint_id);
         }
       }
 
-      // 2. Create or update endpoints
       for (const endpointData of updatedEndpoints) {
         const endpointPayload = { url: endpointData.url, active: endpointData.active ?? true };
-
-        if (endpointData.endpoint_id) { // Update existing endpoint
+        if (endpointData.endpoint_id) {
           const originalEndpoint = originalEndpoints.find(e => e.endpoint_id === endpointData.endpoint_id);
           await endpointAPI.update(endpointData.endpoint_id, { ...originalEndpoint, ...endpointPayload, domainModel: { domain_id: domainId } } as any);
-        } else { // Create new endpoint
+        } else {
           await endpointAPI.create({ ...endpointPayload, domainModel: { domain_id: domainId } });
         }
       }
-
       await refreshDomains();
     } catch (error) {
       console.error('Failed to save domain URLs', error);
     }
   };
 
+  if (!isAuthenticated) {
+    return <Login onLogin={() => setIsAuthenticated(true)} />;
+  }
+
   return (
     <>
       <div id="main_container">
-        <Fab 
-          color="primary" 
-          aria-label="add" 
+        <div style={{ position: 'fixed', top: '1rem', right: '1rem', zIndex: 1000 }}>
+          <Button
+            variant="outlined"
+            color="primary"
+            startIcon={<LogoutIcon />}
+            onClick={handleLogout}
+            style={{ backgroundColor: 'white' }}
+          >
+            Logout
+          </Button>
+        </div>
+
+        <Fab
+          color="primary"
+          aria-label="add"
           onClick={addDomain}
           style={{ position: 'fixed', bottom: '2rem', right: '2rem' }}
         >
@@ -417,8 +463,6 @@ function App() {
 
           <div id="detail_panel">
             {selected ? (
-              // Only render TestDetail if the fetched details match the selected test ID.
-              // This prevents showing stale data from a previous selection while new data is loading.
               selectedTestDetails && selectedTestDetails.test_id === selected.testId ? (
                 <div className="detail_container">
                   <button className="close_detail" onClick={() => setSelected(null)}>Close</button>
@@ -442,6 +486,4 @@ function App() {
     </>
   )
 }
-
-
-export default App
+export default App;
