@@ -1,5 +1,5 @@
 import TextField from '@mui/material/TextField';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import VariantField from './VariantField';
 import type { VariantModel } from '../services/api';
 import { Button, IconButton, Collapse, Checkbox } from '@mui/material';

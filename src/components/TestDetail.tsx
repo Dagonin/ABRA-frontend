@@ -5,6 +5,7 @@ interface TestDetailProps {
   testData: TestModel;
   onSave: (updated: { name?: string; active?: boolean; description?: string; subpath?: string; variantModels?: VariantModel[] }) => void | Promise<void>;
   onDelete: () => void | Promise<void>;
+  onEndpointDelete?: (endpointId: string) => Promise<void>;
 }
 
 export default function TestDetail({ testData, onSave, onDelete }: TestDetailProps) {
